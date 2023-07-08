@@ -3,23 +3,71 @@ import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import { KbKendraStack } from '../lib/kb-kendra-stack';
 import { KbStreamlitAppStack } from '../lib/kb-streamlit-app'
+import { open } from 'fs';
+
 const app = new cdk.App();
+
+/**
+ * Check if cdk context is defined either by context file or command line flags
+ * If the context file is missing return a 
+ */
+
+
+const extractConfig = () => {
+  const scrapeUrls = app.node.tryGetContext('scrapeUrls')
+  if (scrapeUrls === undefined) {
+    console.warn('*** ⛔️ WARNING: You must provide a valid scrapeUrl   ***')
+    console.warn('*** you can do this by editing cdk.context.json 🚀            ***')
+    throw new Error("Missing scrapeUrls")
+  } 
+  const customerName = app.node.tryGetContext('customerName')
+  if (customerName === undefined) {
+    console.warn('*** ⛔️ WARNING: You must provide a valid customerName   ***')
+    console.warn('*** you can do this by editing cdk.context.json 🚀            ***')
+    throw new Error("Missing customerName")
+  }
+  const openAIAPIKey = app.node.tryGetContext('openAIAPIKey')
+  if (openAIAPIKey === undefined) {
+    console.warn('*** ⛔️ WARNING: You must provide a valid openAIAPIKey   ***')
+    console.warn('*** you can do this by editing cdk.context.json 🚀            ***')
+    throw new Error("Missing openAIAPIKey")
+  }
+  const customerFavicon = app.node.tryGetContext('customerFavicon')
+  if (customerFavicon === undefined) {
+    console.warn('*** ⛔️ WARNING: You must provide a valid customerFavicon   ***')
+    console.warn('*** you can do this by editing cdk.context.json 🚀            ***')
+    throw new Error("Missing customerFavicon")
+  }
+  const customerLogo = app.node.tryGetContext('customerLogo')
+  if (customerLogo === undefined) {
+    console.warn('*** ⛔️ WARNING: You must provide a valid customerLogo   ***')
+    console.warn('*** you can do this by editing cdk.context.json 🚀            ***')
+    throw new Error("Missing customerLogo")
+  }
+
+  return {
+    scrapeUrls,
+    customerName,
+    openAIAPIKey,
+    customerFavicon,
+    customerLogo
+  }
+}
+
+const config = extractConfig();
+
+console.log(`*** 🚀 Starting deployment for ${config.customerName} ***`)
+console.log(`*** 🚀 Scraping ${config.scrapeUrls} ***`)
+
 const kendaStack = new KbKendraStack(app, 'KbDemoStack', {
-  /* If you don't specify 'env', this stack will be environment-agnostic.
-   * Account/Region-dependent features and context lookups will not work,
-   * but a single synthesized template can be deployed anywhere. */
-
-  /* Uncomment the next line to specialize this stack for the AWS Account
-   * and Region that are implied by the current CLI configuration. */
-  // env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
-
-  /* Uncomment the next line if you know exactly what Account and Region you
-   * want to deploy the stack to. */
-  // env: { account: '123456789012', region: 'us-east-1' },
-
-  /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
+  scrapeUrls: config.scrapeUrls,
 });
 
 new KbStreamlitAppStack (app, "KbStreamlitAppStack", {
-  kendraIndexId: kendaStack.kendraIndexId
+  kendraIndexId: kendaStack.kendraIndexId,
+  openAIAPIKey: config.openAIAPIKey,
+  customerName: config.customerName,
+  customerFavicon: config.customerFavicon,
+  customerLogo: config.customerLogo
 })
+

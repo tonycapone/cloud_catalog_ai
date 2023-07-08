@@ -1,0 +1,10 @@
+{
+    "scrapeUrls": [
+        "https://www.example.com/"
+    ],
+    "customerName": "ACME Corp",
+    "openAIAPIKey": "OPENAI_API_KEY",
+    "customerFavicon": "optional favicon link",
+    "customerLogo": "optional logo link for chat avatar"
+
+}

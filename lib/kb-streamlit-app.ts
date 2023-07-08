@@ -9,18 +9,22 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 
 interface KbStreamlitAppStackProps extends cdk.StackProps {
     kendraIndexId: string;
+    openAIAPIKey: string;
+    customerName: string;
+    customerFavicon: string;
+    customerLogo: string;
 }
 class KbStreamlitAppStack extends cdk.Stack {
 
-    constructor(scope: Construct, id: string, props?: KbStreamlitAppStackProps) {
+    constructor(scope: Construct, id: string, props: KbStreamlitAppStackProps) {
         super(scope, id, props);
         const vpc = new ec2.Vpc(
-            this, "ZephStreamlitVPC",
+            this, "StreamlitVPC",
             {
                 maxAzs: 2
             }
         )
-        const cluster = new ecs.Cluster(this, "ZephStreamlitCluster", {
+        const cluster = new ecs.Cluster(this, "StreamlitCluster", {
             vpc: vpc
         })
 
@@ -36,7 +40,7 @@ class KbStreamlitAppStack extends cdk.Stack {
         // Add necessary permissions to the role
         taskRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonS3FullAccess'));
         const image = ecs.ContainerImage.fromAsset('lib/streamlit-docker')
-        const fargateService = new ecs_patterns.ApplicationLoadBalancedFargateService(this, "ZephFargateService", {
+        const fargateService = new ecs_patterns.ApplicationLoadBalancedFargateService(this, "StreamlitFargateService", {
             cluster: cluster,
             cpu: 256,
 
@@ -45,17 +49,16 @@ class KbStreamlitAppStack extends cdk.Stack {
                 image: image,
                 taskRole,
                 environment: {
-                    "OPENAI_API_KEY": "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",
-                    "KENDRA_INDEX_ID": props?.kendraIndexId || "KendraIndex"
+                    "OPENAI_API_KEY": props.openAIAPIKey,
+                    "KENDRA_INDEX_ID": props.kendraIndexId,
+                    "CUSTOMER_NAME": props.customerName,
+                    "FAVICON_URL": props.customerFavicon,
+                    "LOGO_URL": props.customerLogo
                 },
                 containerPort: 8501
-
             },
             memoryLimitMiB: 512,
             publicLoadBalancer: true
-
-
-
         })
 
     }

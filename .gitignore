@@ -2,7 +2,14 @@
 !jest.config.js
 *.d.ts
 node_modules
+# Python stuff
+*.pyc
+__pycache__
+*.egg-info
+dist
+
 
 # CDK asset staging directory
 .cdk.staging
 cdk.out
+cdk.context.json

@@ -2,13 +2,11 @@
 import streamlit as st
 from streamlit_chat import message
 import os
-import json
 import urllib.parse
-from langchain.chains import ConversationChain
 from langchain.llms import OpenAI
 from aws_langchain.kendra_index_retriever import KendraIndexRetriever
 from langchain.prompts import PromptTemplate
-from langchain.chains import RetrievalQA
+from langchain.chains import ConversationalRetrievalChain
 from streamlit.logger import get_logger
 
 logger = get_logger(__name__)
@@ -16,6 +14,10 @@ logger = get_logger(__name__)
 logger.info('Hello world')
 kendra_index_id = os.environ["KENDRA_INDEX_ID"]
 aws_region = os.environ["AWS_REGION"]
+customer_name = os.environ["CUSTOMER_NAME"]
+favicon_url = os.environ["FAVICON_URL"] if "FAVICON_URL" in os.environ else None
+chatbot_logo = os.environ["LOGO_URL"] if "LOGO_URL" in os.environ else None
+
 logger.info("Kendra index id: " + kendra_index_id)
 logger.info("AWS region: " + aws_region)
 # Kendra retriever
@@ -32,7 +34,6 @@ retriever = KendraIndexRetriever(
 llm = OpenAI(temperature=0)
 # chain = load_chain()
 
-
 # Prompt template for internal data bot interface
 template = """You are a talkative AI Retrieval Augmented knowledge bot who answers questions with only the data provided as context. You give lots of detail in your answers, and if the answer to the question is not present in the context section at the bottom, you say "I don't know".  
 
@@ -45,26 +46,30 @@ Answer:"""
 PROMPT = PromptTemplate(
     template=template, input_variables=["context", "question"]
 )
-
+st.set_page_config(page_title=customer_name+ " ChatBot", page_icon=favicon_url if favicon_url else ":robot:")
 chain_type_kwargs = {"prompt": PROMPT}
-qa = RetrievalQA.from_chain_type(
-    llm,
-    chain_type="stuff",
-    retriever=retriever,
-    chain_type_kwargs=chain_type_kwargs,
-    return_source_documents=True,
+qa = ConversationalRetrievalChain.from_llm(
+    llm=llm, 
+    retriever=retriever,  # ☜ DOCSEARCH
+    return_source_documents=True,        # ☜ CITATIONS
+    return_generated_question=True,          # ☜ ANSWER
+
 )
 
+qa.combine_docs_chain.llm_chain.prompt = PROMPT
 
 # From here down is all the StreamLit UI.
-st.set_page_config(page_title="7-Eleven ChatBot", page_icon="https://www.7-eleven.com/favicon/favicon-us.ico")
-st.header("7-Eleven ChatBot")
+# if favicon_url is defined, use it
 
 if "generated" not in st.session_state:
     st.session_state["generated"] = []
 
 if "past" not in st.session_state:
     st.session_state["past"] = []
+
+if "chat_history" not in st.session_state:
+    st.session_state["chat_history"] = []
+
 def get_text():
     input_text = st.text_input(label="You: ", key="input")
     logger.info("Input text: " + input_text)
@@ -74,11 +79,15 @@ user_input = get_text()
 if user_input:
     st.session_state.past.append(user_input)
     # output = chain.run(input=user_input)
-    result = qa(user_input)
-    if("I don't know" not in result["result"] and len(result['source_documents']) > 0):
+    result = qa({"question":user_input, "chat_history": st.session_state["chat_history"]})
+    print(result)
+    if("I don't know" not in result["answer"] and len(result['source_documents']) > 0):
         source_url = result['source_documents'][0].metadata['source']
         safe_source_url = urllib.parse.quote_plus(source_url)
-        response_text = result["result"].strip() + "\n" + source_url
+        response_text = result["answer"].strip() + "\n" + source_url
+        # chat_history = [(user_input, result["answer"])]
+        # st.session_state["chat_history"].append((user_input, result["answer"]+ "Source Document Text: " + result['source_documents'][0].page_content))
+        st.session_state["chat_history"].append((user_input, result["answer"]))
     else:
         response_text = "I don't know"
     logger.info("Response text: " + response_text)
@@ -89,9 +98,8 @@ if user_input:
 if st.session_state["generated"]:
 
     for i in range(len(st.session_state["generated"]) - 1, -1, -1):
-
+        message(st.session_state["generated"][i], key=str(i), logo=chatbot_logo, avatar_style="no-avatar")
         message(st.session_state["past"][i], is_user=True, key=str(i) + "_user")
-        message(st.session_state["generated"][i], key=str(i), logo="https://images.contentstack.io/v3/assets/blt79dc99fad342cc45/bltaea3ad03c180ee64/633f08d845693810d212c437/7_Eleven_Horizontal_2022_RGB_thumb_1639377127_8824.png", avatar_style="no-avatar")
 
 
 

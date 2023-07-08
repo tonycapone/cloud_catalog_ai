@@ -5,11 +5,15 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 
 
 
+interface KbKendraStackProps extends cdk.StackProps {
+  scrapeUrls?: string[];
+}
 
 export class KbKendraStack extends cdk.Stack {
   public readonly kendraIndexId: string;
-  
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+
+
+  constructor(scope: Construct, id: string, props: KbKendraStackProps) {
     super(scope, id, props);
 
 
@@ -23,7 +27,6 @@ export class KbKendraStack extends cdk.Stack {
       ]
     }
     )
-
     // Initizalize Kendra Index
     const kendraIndex = new kendra.CfnIndex(this, 'KendraIndex', {
       name: 'KendraIndex',
@@ -33,28 +36,31 @@ export class KbKendraStack extends cdk.Stack {
 
     this.kendraIndexId = kendraIndex.ref;
 
-    // Initialize Kendra Data Source Web Crawler V2
-    const kendraDataSource = new kendra.CfnDataSource(this, 'KendraDataSource', {
-      name: 'KendraDataSource',
-      indexId: kendraIndex.ref,
-      roleArn: kendraRole.roleArn,
-      type: 'WEBCRAWLER',
-      dataSourceConfiguration: {
-        webCrawlerConfiguration: {
-          urls: {
-            seedUrlConfiguration: {
-              seedUrls: ['https://docs.aws.amazon.com/appflow/latest/userguide/what-is-appflow.html'],
-            }
-          },
-          crawlDepth: 1,
-          maxLinksPerPage: 100,
-          maxContentSizePerPageInMegaBytes: 50,
-          maxUrlsPerMinuteCrawlRate: 100,
-        }
+    if (props.scrapeUrls) {
+      // Initialize Kendra Data Source Web Crawler V1
+      const kendraDataSource = new kendra.CfnDataSource(this, 'KendraDataSource', {
+        name: 'KendraDataSource',
+        indexId: kendraIndex.ref,
+        roleArn: kendraRole.roleArn,
+        type: 'WEBCRAWLER',
+        dataSourceConfiguration: {
+          webCrawlerConfiguration: {
 
+            urls: {
+              seedUrlConfiguration: {
+                seedUrls: props.scrapeUrls,
+              }
+            },
+            crawlDepth: 3,
+            maxLinksPerPage: 100,
+            maxContentSizePerPageInMegaBytes: 50,
+            maxUrlsPerMinuteCrawlRate: 100,
+          }
+
+        }
       }
+      )
     }
-    )
 
   }
 
