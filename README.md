@@ -5,6 +5,8 @@ Copy `cdk.context.json.template` to `cdk.context.json` and fill in the values.
 
 Set [up cdk](https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html#getting_started_install) and [bootstrap your account](https://docs.aws.amazon.com/cdk/latest/guide/bootstrapping.html) if you haven't already.
 
+Run `npm install` to install the dependencies.
+
 
 Then run `cdk deploy --all` to deploy the project to your environment.
 

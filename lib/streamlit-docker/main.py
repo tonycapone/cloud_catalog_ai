@@ -78,11 +78,15 @@ if "past" not in st.session_state:
 if "chat_history" not in st.session_state:
     st.session_state["chat_history"] = []
 
-def get_text():
-    input_text = st.text_input(label="You: ", key="input")
-    logger.info("Input text: " + input_text)
-    return input_text
-user_input = get_text()
+def submit():
+    st.session_state['user_input'] = st.session_state['input']
+    st.session_state['input'] = ""
+
+
+
+
+
+user_input = st.session_state['user_input'] if 'user_input' in st.session_state else None
 
 if user_input:
     st.session_state.past.append(user_input)
@@ -101,20 +105,32 @@ if user_input:
     logger.info("Condensed query: " + result["generated_question"])
     logger.info("Response text: " + response_text)
     st.session_state.generated.append(response_text)
+    st.session_state.condensed_query = result["generated_question"]
+
+
+
 
 
 
 if st.session_state["generated"]:
-
     for i in range(len(st.session_state["generated"]) - 1, -1, -1):
-        message(st.session_state["generated"][i], key=str(i), logo=chatbot_logo, avatar_style="no-avatar")
-        message(st.session_state["past"][i], is_user=True, key=str(i) + "_user")
+        index = len(st.session_state["generated"]) - i - 1
+        message(st.session_state["past"][index], is_user=True, key=str(index) + "_user")
+        message(st.session_state["generated"][index], key=str(index), logo=chatbot_logo, avatar_style="no-avatar")
 
 
 
-
-
-
+st.text_input(label="You: ", key="input", value="", on_change=submit, placeholder="Ask a question!", )
+st.write("")
+st.write("")
+st.write("")
+st.write("")
+st.write("")
+st.write("")
+st.write("")
+st.write("")
+with st.expander("Debug", expanded=False):
+    st.write(st.session_state)
 
 
 

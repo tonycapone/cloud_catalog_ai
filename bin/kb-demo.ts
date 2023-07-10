@@ -33,7 +33,15 @@ const extractConfig = () => {
     throw new Error("Missing openAIAPIKey")
   }
   const customerFavicon = app.node.tryGetContext('customerFavicon')
+  if (customerFavicon === undefined) {
+    console.info('*** customerFavicon is missing   ***')
+    console.info('*** you can do this by editing cdk.context.json 🚀            ***')
+  }
   const customerLogo = app.node.tryGetContext('customerLogo')
+  if (customerLogo === undefined) {
+    console.info('*** customerLogo is missing   ***')
+    console.info('*** you can do this by editing cdk.context.json 🚀            ***')
+  }
 
   return {
     scrapeUrls,
