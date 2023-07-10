@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-import { KbKendraStack } from '../lib/kb-kendra-stack';
+import { KbKendraStack } from '../lib/streamlit-docker/kendra-stack/kb-kendra-stack';
 import { KbStreamlitAppStack } from '../lib/kb-streamlit-app'
 import { open } from 'fs';
 
@@ -33,17 +33,7 @@ const extractConfig = () => {
     throw new Error("Missing openAIAPIKey")
   }
   const customerFavicon = app.node.tryGetContext('customerFavicon')
-  if (customerFavicon === undefined) {
-    console.warn('*** ⛔️ WARNING: You must provide a valid customerFavicon   ***')
-    console.warn('*** you can do this by editing cdk.context.json 🚀            ***')
-    throw new Error("Missing customerFavicon")
-  }
   const customerLogo = app.node.tryGetContext('customerLogo')
-  if (customerLogo === undefined) {
-    console.warn('*** ⛔️ WARNING: You must provide a valid customerLogo   ***')
-    console.warn('*** you can do this by editing cdk.context.json 🚀            ***')
-    throw new Error("Missing customerLogo")
-  }
 
   return {
     scrapeUrls,
