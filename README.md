@@ -3,9 +3,10 @@
 ## Usage
 Copy `cdk.context.json.template` to `cdk.context.json` and fill in the values.
 
+Set [up cdk](https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html#getting_started_install) and [bootstrap your account](https://docs.aws.amazon.com/cdk/latest/guide/bootstrapping.html) if you haven't already.
 
 
-Then run `cdk deploy` to deploy the stack.
+Then run `cdk deploy --all` to deploy the project to your environment.
 
 ### Example Configuration
 ```
@@ -26,9 +27,10 @@ Then run `cdk deploy` to deploy the stack.
 `CustomerLogo` Optional. The logo that will be displayed next to generated responses.
 `openAIAPIKey` is self explanatory
 
-## Useful commands
+## Stack Description
+### KendraStack
+This stack creates a Kendra index. It also creates a Kendra datasource for the index and initiates a sync job to populate the datasource with the scraped URLs.
 
+### KbStreamlitAppStack
+This stack creates a Streamlit ChatBot app that interacts with the Kendra Index. 
 
-* `cdk deploy`      deploy this stack to your default AWS account/region
-* `cdk diff`        compare deployed stack with current state
-* `cdk synth`       emits the synthesized CloudFormation template
