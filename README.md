@@ -10,24 +10,26 @@ Run `npm install` to install the dependencies.
 
 Then run `cdk deploy --all` to deploy the project to your environment.
 
-### Example Configuration
+### Example Configuration for cdk.context.json
 ```
 {
     "scrapeUrls": [
         "https://www.example.com/"
     ],
     "customerName": "ACME Corp",
-    "openAIAPIKey": "OPENAI_API_KEY",
     "customerFavicon": "optional favicon link",
     "customerLogo": "optional logo link for chat avatar"
 
 }
 ```
- The `scrapeUrls` array contains the URLs that will be scraped and indexed into Kendra.
- `customerName` Optional. This is the name of the customer that will be displayed in the header of the Streamlit Chat UI.
+The `scrapeUrls` array contains the URLs that will be scraped and indexed into Kendra.
+
+`customerName` Optional. This is the name of the customer that will be displayed in the header of the Streamlit Chat UI.
+
 `CustomerFavicon` Optional. The favicon that will be displayed in the header of the Streamlit Chat UI.
+
 `CustomerLogo` Optional. The logo that will be displayed next to generated responses.
-`openAIAPIKey` is self explanatory
+
 
 ## Stack Description
 ### KendraStack
