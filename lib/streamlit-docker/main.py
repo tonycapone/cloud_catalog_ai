@@ -4,6 +4,8 @@ from streamlit_chat import message
 import os
 import urllib.parse
 from langchain.llms import OpenAI
+import boto3
+import json
 from aws_langchain.kendra_index_retriever import KendraIndexRetriever
 from langchain.prompts import PromptTemplate
 from langchain.chains import ConversationalRetrievalChain
@@ -19,28 +21,58 @@ chatbot_logo = os.environ["LOGO_URL"] if "LOGO_URL" in os.environ else None
 
 logger.info("Kendra index id: " + kendra_index_id)
 logger.info("AWS region: " + aws_region)
+secrets_manager = boto3.client("secretsmanager", region_name=aws_region)
+bedrock_creds = boto3.client("sts").assume_role(
+    RoleArn="arn:aws:iam::444931483884:role/central-bedrock-access",
+    RoleSessionName="bedrock",
+)['Credentials']
+print(bedrock_creds)
+
 # Kendra retriever
 retriever = KendraIndexRetriever(
     kendraindex=kendra_index_id,
     awsregion=aws_region,
     return_source_documents=False
 )
+
+
+
 # def load_chain():
 #     """Logic for loading the chain you want to use should go here."""
 #     llm = OpenAI(temperature=0)
 #     chain = ConversationChain(llm=llm)
 #     return chain
-llm = OpenAI(temperature=0)
+# llm = OpenAI(temperature=0)
 # chain = load_chain()
 
+from langchain.llms.bedrock import Bedrock
+BEDROCK_CLIENT = boto3.client("bedrock", 'us-east-1', 
+                              aws_access_key_id=bedrock_creds["AccessKeyId"], 
+                              aws_secret_access_key=bedrock_creds["SecretAccessKey"], 
+                              aws_session_token=bedrock_creds["SessionToken"])
+llm = Bedrock(
+    client=BEDROCK_CLIENT, model_id="anthropic.claude-v1", model_kwargs={"temperature":.3, "max_tokens_to_sample": 300}
+)
+
 # Prompt template for internal data bot interface
-template = """You are a talkative and helpful AI Retrieval Augmented knowledge bot who answers questions with only the data provided as context. You give lots of detail in your answers, and if the answer to the question is not present in the context section at the bottom, you say "I don't know".  
+template = """You are  helpful and talkative """ + customer_name + """ assistant that answers questions directly and only using the information provided in the context below. 
+Do not include any framing language such as "According to the context" in your responses. You should pretend as if you already know the answer to the question. 
 
+Simply answer the question clearly and with lots of detail using only the relevant details from the information below. If the context does not contain the answer, say "I don't know."
+I repeat DO NOT TALK ABOUT THE CONTEXT
 Now read this context and answer the question at the bottom:
-Context: "{context}"
+Context: {context}"
 
-Question: {question}
-Answer:"""
+Question: "Hey """ + customer_name + """ Chatbot! {question}
+Answer: """
+
+condensed_question_template = """Given the following conversation and a follow up question, rephrase the follow up question to be a standalone question.
+
+Chat History:
+{chat_history}
+Follow Up Input: {question}
+Standalone question:"""
+CONDENSE_QUESTION_PROMPT = PromptTemplate.from_template(condensed_question_template)
 
 PROMPT = PromptTemplate(
     template=template, input_variables=["context", "question"]
@@ -61,6 +93,10 @@ qa = ConversationalRetrievalChain.from_llm(
     retriever=retriever,  # ☜ DOCSEARCH
     return_source_documents=True,        # ☜ CITATIONS
     return_generated_question=True,          # ☜ ANSWER
+    condense_question_prompt=CONDENSE_QUESTION_PROMPT,
+    verbose=True,
+
+
 
 )
 
@@ -106,6 +142,10 @@ if user_input:
     logger.info("Response text: " + response_text)
     st.session_state.generated.append(response_text)
     st.session_state.condensed_query = result["generated_question"]
+    #remove old chat history older than 2 messages
+    if len(st.session_state["chat_history"]) > 2:
+        st.session_state["chat_history"].pop(0)
+
 
 
 
@@ -131,6 +171,10 @@ st.write("")
 st.write("")
 with st.expander("Debug", expanded=False):
     st.write(st.session_state)
+    st.text_input(label="access_key_id", key="access_key_id", value="", placeholder="access_key_id")
+    st.text_input(label="secret_key", key="secret_key", value="", placeholder="secret_key")
+    st.text_input(label="session_token", key="session_token", value="", placeholder="session_token")
+
 
 
 

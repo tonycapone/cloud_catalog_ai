@@ -2,4 +2,4 @@ langchain==0.0.220
 openai
 streamlit
 streamlit-chat
-boto3>=1.26.159
+boto3>=1.28.2
