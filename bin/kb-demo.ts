@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-import { KbKendraStack } from '../lib/streamlit-docker/kendra-stack/kb-kendra-stack';
+import { KbKendraStack } from '../lib/kendra-stack/kb-kendra-stack';
 import { KbStreamlitAppStack } from '../lib/kb-streamlit-app'
 import { open } from 'fs';
 
