@@ -27,11 +27,6 @@ const extractConfig = () => {
     throw new Error("Missing customerName")
   }
   const openAIAPIKey = app.node.tryGetContext('openAIAPIKey')
-  if (openAIAPIKey === undefined) {
-    console.warn('*** ⛔️ WARNING: You must provide a valid openAIAPIKey   ***')
-    console.warn('*** you can do this by editing cdk.context.json 🚀            ***')
-    throw new Error("Missing openAIAPIKey")
-  }
   const customerFavicon = app.node.tryGetContext('customerFavicon')
   if (customerFavicon === undefined) {
     console.info('*** customerFavicon is missing   ***')
