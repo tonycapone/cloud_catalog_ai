@@ -36,6 +36,12 @@ class KbStreamlitAppStack extends cdk.Stack {
         taskRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonS3FullAccess'));
         taskRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonKendraFullAccess'));
 
+        taskRole.addToPolicy(new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: [ "sts:AssumeRole" ],
+            resources: [ "arn:aws:iam::444931483884:role/central-bedrock-access"]
+        }));
+
 
         // Add necessary permissions to the role
         taskRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonS3FullAccess'));
