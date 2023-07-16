@@ -16,7 +16,7 @@ aws_region = os.environ["AWS_REGION"]
 customer_name = os.environ["CUSTOMER_NAME"]
 favicon_url = os.environ["FAVICON_URL"] if "FAVICON_URL" in os.environ else None
 chatbot_logo = os.environ["LOGO_URL"] if "LOGO_URL" in os.environ else None
-bedrock_role = os.environ["BEDROCK_ASSUME_ROLE_ARN"] if "LOGO_URL" in os.environ else None
+bedrock_role = os.environ["BEDROCK_ASSUME_ROLE_ARN"] if "BEDROCK_ASSUME_ROLE_ARN" in os.environ else None
 
 logger.info("Kendra index id: " + kendra_index_id)
 logger.info("AWS region: " + aws_region)

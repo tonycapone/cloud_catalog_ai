@@ -9,7 +9,8 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 
 interface KbStreamlitAppStackProps extends cdk.StackProps {
     kendraIndexId: string;
-    openAIAPIKey: string;
+    openAIAPIKey?: string;
+    bedrockRoleArn?: string;
     customerName: string;
     customerFavicon: string;
     customerLogo: string;
@@ -32,15 +33,17 @@ class KbStreamlitAppStack extends cdk.Stack {
         const taskRole = new iam.Role(this, 'TaskRole', {
             assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
         });
-            // Add necessary permissions to the role
+        // Add necessary permissions to the role
         taskRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonS3FullAccess'));
         taskRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonKendraFullAccess'));
 
-        taskRole.addToPolicy(new iam.PolicyStatement({
-            effect: iam.Effect.ALLOW,
-            actions: [ "sts:AssumeRole" ],
-            resources: [ "arn:aws:iam::444931483884:role/central-bedrock-access"]
-        }));
+        if (props.bedrockRoleArn) {
+            taskRole.addToPolicy(new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: ["sts:AssumeRole"],
+                resources: [props.bedrockRoleArn]
+            }));
+        }
 
         // Add necessary permissions to the role
         taskRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonS3FullAccess'));
@@ -48,13 +51,13 @@ class KbStreamlitAppStack extends cdk.Stack {
         const fargateService = new ecs_patterns.ApplicationLoadBalancedFargateService(this, "StreamlitFargateService", {
             cluster: cluster,
             cpu: 256,
-
             desiredCount: 1,
             taskImageOptions: {
                 image: image,
                 taskRole,
                 environment: {
-                    "OPENAI_API_KEY": props.openAIAPIKey,
+                    "OPENAI_API_KEY": props.openAIAPIKey || "",
+                    "BEDROCK_ASSUME_ROLE_ARN": props.bedrockRoleArn || "",
                     "KENDRA_INDEX_ID": props.kendraIndexId,
                     "CUSTOMER_NAME": props.customerName,
                     "FAVICON_URL": props.customerFavicon,

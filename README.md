@@ -6,7 +6,7 @@ See the [this quip](https://quip-amazon.com/pI57Abo7dElG/Enterprise-Knowledge-Ba
 
 __Note: You must have access to a Bedrock enabled account to use this demo. You can also use the OpenAI API instead of Bedrock, but it's not advisable to demo in this way to customers.__
 
-## Usage
+## Deployment
 Run `npm install` to install the dependencies.
 
 Copy `cdk.context.json.template` to `cdk.context.json` and fill in the values.
@@ -51,3 +51,14 @@ This stack creates a Kendra index. It also creates a Kendra datasource for the i
 ### KbStreamlitAppStack
 This stack creates a Streamlit ChatBot app that interacts with the Kendra Index. 
 
+## Local Development
+To deploy the Streamlit app locally, cd to `/lib/streamlit-docker`. You must define the following environment variables:
+```
+KENDRA_INDEX_ID
+CUSTOMER_NAME
+LOGO_URL
+FAVICON_URL
+AWS_REGION
+OPENAI_API_KEY or BEDROCK_ASSUME_ROLE_ARN
+```
+Then run `streamlit run main.py` to start the app.
