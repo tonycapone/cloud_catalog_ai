@@ -42,7 +42,6 @@ class KbStreamlitAppStack extends cdk.Stack {
             resources: [ "arn:aws:iam::444931483884:role/central-bedrock-access"]
         }));
 
-
         // Add necessary permissions to the role
         taskRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonS3FullAccess'));
         const image = ecs.ContainerImage.fromAsset('lib/streamlit-docker')
