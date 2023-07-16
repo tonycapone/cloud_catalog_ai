@@ -5,6 +5,9 @@ env:
     CUSTOMER_NAME: ""
     SCRAPE_URLS: ""
     CUSTOMER_LOGO_URL: ""
+    BEDROCK_ASSUME_ROLE_ARN: ""
+    OPENAI_API_KEY: ""
+    CUSTOMER_FAVICON_URL: ""
 
 phases:
   pre_build:
@@ -13,7 +16,10 @@ phases:
         echo '{
           "scrapeUrls": ["'$SCRAPE_URLS'"],
           "customerName": "'$CUSTOMER_NAME'",
-          "customerLogo": "'$CUSTOMER_LOGO_URL'"
+          "customerLogo": "'$CUSTOMER_LOGO_URL'",
+          "bedrockRoleARN": "'$BEDROCK_ASSUME_ROLE_ARN'",
+          "customerFavicon": "'$CUSTOMER_FAVICON_URL'",
+          "openAIAPIKey": "'$OPENAI_API_KEY'"
         }' > cdk.context.json
   build:
     commands:
