@@ -21,6 +21,7 @@ phases:
           "customerFavicon": "'$CUSTOMER_FAVICON_URL'",
           "openAIAPIKey": "'$OPENAI_API_KEY'"
         }' > cdk.context.json
+      - cat cdk.context.json
   build:
     commands:
       - npm install
