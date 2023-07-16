@@ -10,7 +10,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 interface KbStreamlitAppStackProps extends cdk.StackProps {
     kendraIndexId: string;
     openAIAPIKey?: string;
-    bedrockRoleArn?: string;
+    bedrockRoleARN?: string;
     customerName: string;
     customerFavicon: string;
     customerLogo: string;
@@ -37,11 +37,11 @@ class KbStreamlitAppStack extends cdk.Stack {
         taskRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonS3FullAccess'));
         taskRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonKendraFullAccess'));
 
-        if (props.bedrockRoleArn) {
+        if (props.bedrockRoleARN) {
             taskRole.addToPolicy(new iam.PolicyStatement({
                 effect: iam.Effect.ALLOW,
                 actions: ["sts:AssumeRole"],
-                resources: [props.bedrockRoleArn]
+                resources: [props.bedrockRoleARN]
             }));
         }
 
@@ -57,7 +57,7 @@ class KbStreamlitAppStack extends cdk.Stack {
                 taskRole,
                 environment: {
                     "OPENAI_API_KEY": props.openAIAPIKey || "",
-                    "BEDROCK_ASSUME_ROLE_ARN": props.bedrockRoleArn || "",
+                    "BEDROCK_ASSUME_ROLE_ARN": props.bedrockRoleARN || "",
                     "KENDRA_INDEX_ID": props.kendraIndexId,
                     "CUSTOMER_NAME": props.customerName,
                     "FAVICON_URL": props.customerFavicon,
