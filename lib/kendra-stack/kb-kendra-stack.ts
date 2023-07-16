@@ -33,7 +33,7 @@ export class KbKendraStack extends cdk.Stack {
     )
     // Initizalize Kendra Index
     const kendraIndex = new kendra.CfnIndex(this, 'KendraIndex', {
-      name: 'KendraIndex',
+      name: this.node.tryGetContext('customerName') + '-KendraIndex',
       edition: 'DEVELOPER_EDITION',
       roleArn: kendraRole.roleArn,
     });
@@ -55,7 +55,7 @@ export class KbKendraStack extends cdk.Stack {
                 seedUrls: props.scrapeUrls,
               }
             },
-            crawlDepth: 3,
+            crawlDepth: 4,
             maxLinksPerPage: 100,
             maxContentSizePerPageInMegaBytes: 50,
             maxUrlsPerMinuteCrawlRate: 100,

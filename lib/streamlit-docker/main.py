@@ -2,10 +2,8 @@
 import streamlit as st
 from streamlit_chat import message
 import os
-import urllib.parse
 from langchain.llms import OpenAI
 import boto3
-import json
 from aws_langchain.kendra_index_retriever import KendraIndexRetriever
 from langchain.prompts import PromptTemplate
 from langchain.chains import ConversationalRetrievalChain
@@ -18,15 +16,11 @@ aws_region = os.environ["AWS_REGION"]
 customer_name = os.environ["CUSTOMER_NAME"]
 favicon_url = os.environ["FAVICON_URL"] if "FAVICON_URL" in os.environ else None
 chatbot_logo = os.environ["LOGO_URL"] if "LOGO_URL" in os.environ else None
+bedrock_role = os.environ["BEDROCK_ASSUME_ROLE_ARN"] if "LOGO_URL" in os.environ else None
 
 logger.info("Kendra index id: " + kendra_index_id)
 logger.info("AWS region: " + aws_region)
-secrets_manager = boto3.client("secretsmanager", region_name=aws_region)
-bedrock_creds = boto3.client("sts").assume_role(
-    RoleArn="arn:aws:iam::444931483884:role/central-bedrock-access",
-    RoleSessionName="bedrock",
-)['Credentials']
-print(bedrock_creds)
+
 
 # Kendra retriever
 retriever = KendraIndexRetriever(
@@ -35,24 +29,25 @@ retriever = KendraIndexRetriever(
     return_source_documents=False
 )
 
+# Try Bedrock first then fall back to OpenAI
+try: 
+    bedrock_creds = boto3.client("sts").assume_role(
+    RoleArn=bedrock_role,
+    RoleSessionName="bedrock",)['Credentials']
 
+    logger.info("Obtained Bedrock Temporary Credentials")
+    from langchain.llms.bedrock import Bedrock
+    BEDROCK_CLIENT = boto3.client("bedrock", 'us-east-1', 
+                                aws_access_key_id=bedrock_creds["AccessKeyId"], 
+                                aws_secret_access_key=bedrock_creds["SecretAccessKey"], 
+                                aws_session_token=bedrock_creds["SessionToken"])
+    llm = Bedrock(
+        client=BEDROCK_CLIENT, model_id="anthropic.claude-v1", model_kwargs={"temperature":.3, "max_tokens_to_sample": 300}
+    )
+except:
+    llm = OpenAI(temperature=0.3, openai_api_key=os.environ["OPENAI_API_KEY"])
+    logger.info("Bedrock client not available. Using OpenAI")
 
-# def load_chain():
-#     """Logic for loading the chain you want to use should go here."""
-#     llm = OpenAI(temperature=0)
-#     chain = ConversationChain(llm=llm)
-#     return chain
-# llm = OpenAI(temperature=0)
-# chain = load_chain()
-
-from langchain.llms.bedrock import Bedrock
-BEDROCK_CLIENT = boto3.client("bedrock", 'us-east-1', 
-                              aws_access_key_id=bedrock_creds["AccessKeyId"], 
-                              aws_secret_access_key=bedrock_creds["SecretAccessKey"], 
-                              aws_session_token=bedrock_creds["SessionToken"])
-llm = Bedrock(
-    client=BEDROCK_CLIENT, model_id="anthropic.claude-v1", model_kwargs={"temperature":.3, "max_tokens_to_sample": 300}
-)
 
 # Prompt template for internal data bot interface
 template = """You are  helpful and talkative """ + customer_name + """ assistant that answers questions directly and only using the information provided in the context below. 

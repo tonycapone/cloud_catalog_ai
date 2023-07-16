@@ -1,11 +1,17 @@
 # Retrieval Augmented Generation Demo-In-A-Box
+## About
+This project is an easily deployable demo-in-a-box that demonstrates how to use the [Retrieval Augmented Generation](https://arxiv.org/abs/2005.11401) model to build a Generative AI chatbot that can answer questions about a customer's website. It uses [Amazon Kendra](https://aws.amazon.com/kendra/) to index the website and [Amazon Bedrock](https://aws.amazon.com/bedrock/) to generate responses to questions. It also uses [Streamlit](https://www.streamlit.io/) to provide a web interface for the chatbot.
+
+See the [this quip](https://quip-amazon.com/pI57Abo7dElG/Enterprise-Knowledge-Base-Chatbot-Demo) for more information. 
+
+__Note: You must have access to a Bedrock enabled account to use this demo. You can also use the OpenAI API instead of Bedrock, but it's not advisable to demo in this way to customers.__
 
 ## Usage
+Run `npm install` to install the dependencies.
+
 Copy `cdk.context.json.template` to `cdk.context.json` and fill in the values.
 
 Set [up cdk](https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html#getting_started_install) and [bootstrap your account](https://docs.aws.amazon.com/cdk/latest/guide/bootstrapping.html) if you haven't already.
-
-Run `npm install` to install the dependencies.
 
 
 Then run `cdk deploy --all` to deploy the project to your environment.
@@ -18,6 +24,7 @@ Then run `cdk deploy --all` to deploy the project to your environment.
     ],
     "customerName": "ACME Corp",
     "customerFavicon": "optional favicon link",
+    "bedrockRoleArn": "arn:aws:iam::123456789012:role/bedrock-role",
     "customerLogo": "optional logo link for chat avatar"
 
 }
@@ -26,9 +33,15 @@ The `scrapeUrls` array contains the URLs that will be scraped and indexed into K
 
 `customerName` Optional. This is the name of the customer that will be displayed in the header of the Streamlit Chat UI.
 
-`CustomerFavicon` Optional. The favicon that will be displayed in the header of the Streamlit Chat UI.
+`customerFavicon` Optional. The favicon that will be displayed in the header of the Streamlit Chat UI.
 
-`CustomerLogo` Optional. The logo that will be displayed next to generated responses.
+`customerLogo` Optional. The logo that will be displayed next to generated responses.
+
+You must also specify one of:
+`bedrockRoleArn` The ARN of a role that has access to the Bedrock API.
+
+or
+`openaiApiKey` An API key for the OpenAI API.
 
 
 ## Stack Description
