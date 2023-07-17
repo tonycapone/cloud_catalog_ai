@@ -62,11 +62,11 @@ const config = extractConfig();
 console.log(`*** 🚀 Starting deployment for ${config.customerName} ***`)
 console.log(`*** 🚀 Scraping ${config.scrapeUrls} ***`)
 
-const kendaStack = new KbKendraStack(app, `KB-${config.customerName}-KendraStack`, {
+const kendaStack = new KbKendraStack(app, `KB-${config.customerName}-KendraStack`.replace(" ", "-"), {
   scrapeUrls: config.scrapeUrls,
 });
 
-new KbStreamlitAppStack (app, `KB-${config.customerName}-AppStack`, {
+new KbStreamlitAppStack (app, `KB-${config.customerName}-AppStack`.replace(" ", "-"), {
   kendraIndexId: kendaStack.kendraIndexId,
   openAIAPIKey: config.openAIAPIKey,
   customerName: config.customerName,
