@@ -64,6 +64,7 @@ console.log(`*** 🚀 Scraping ${config.scrapeUrls} ***`)
 
 const kendaStack = new KbKendraStack(app, `KB-${config.customerName}-KendraStack`.replace(" ", "-"), {
   scrapeUrls: config.scrapeUrls,
+  customerName: config.customerName.replace(" ", "-")
 });
 
 new KbStreamlitAppStack (app, `KB-${config.customerName}-AppStack`.replace(" ", "-"), {

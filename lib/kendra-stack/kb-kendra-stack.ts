@@ -13,6 +13,7 @@ import {
 
 interface KbKendraStackProps extends cdk.StackProps {
   scrapeUrls?: string[];
+  customerName: string;
 }
 
 export class KbKendraStack extends cdk.Stack {
@@ -33,7 +34,7 @@ export class KbKendraStack extends cdk.Stack {
     )
     // Initizalize Kendra Index
     const kendraIndex = new kendra.CfnIndex(this, 'KendraIndex', {
-      name: this.node.tryGetContext('customerName') + '-KendraIndex',
+      name: props.customerName + '-KendraIndex',
       edition: 'DEVELOPER_EDITION',
       roleArn: kendraRole.roleArn,
     });
