@@ -22,7 +22,7 @@ class KbStreamlitAppStack extends cdk.Stack {
         const vpc = new ec2.Vpc(
             this, "StreamlitVPC",
             {
-                maxAzs: 2
+                maxAzs: 1
             }
         )
         const cluster = new ecs.Cluster(this, "StreamlitCluster", {
