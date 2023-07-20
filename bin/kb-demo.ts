@@ -37,8 +37,8 @@ const extractConfig = () => {
     console.info('*** customerLogo is missing   ***')
     console.info('*** you can do this by editing cdk.context.json 🚀            ***')
   }
-  const bedrockRoleArn = app.node.tryGetContext('bedrockRoleArn')
-  if (bedrockRoleArn === undefined) {
+  const bedrockRoleARN = app.node.tryGetContext('bedrockRoleARN')
+  if (bedrockRoleARN === undefined) {
     if (openAIAPIKey === undefined) {
       console.error('*** You must provide either a bedrockRoleArn or an openAIAPIKey')
       console.error('*** you can do this by editing cdk.context.json 🚀            ***')
@@ -53,7 +53,7 @@ const extractConfig = () => {
     openAIAPIKey,
     customerFavicon,
     customerLogo,
-    bedrockRoleArn
+    bedrockRoleARN
   }
 }
 
@@ -62,16 +62,17 @@ const config = extractConfig();
 console.log(`*** 🚀 Starting deployment for ${config.customerName} ***`)
 console.log(`*** 🚀 Scraping ${config.scrapeUrls} ***`)
 
-const kendaStack = new KbKendraStack(app, `KB-${config.customerName}-KendraStack`, {
+const kendaStack = new KbKendraStack(app, `KB-${config.customerName}-KendraStack`.replace(" ", "-"), {
   scrapeUrls: config.scrapeUrls,
+  customerName: config.customerName.replace(" ", "-")
 });
 
-new KbStreamlitAppStack (app, `KB-${config.customerName}-AppStack`, {
+new KbStreamlitAppStack (app, `KB-${config.customerName}-AppStack`.replace(" ", "-"), {
   kendraIndexId: kendaStack.kendraIndexId,
   openAIAPIKey: config.openAIAPIKey,
   customerName: config.customerName,
   customerFavicon: config.customerFavicon,
   customerLogo: config.customerLogo,
-  bedrockRoleArn: config.bedrockRoleArn
+  bedrockRoleARN: config.bedrockRoleARN
 })
 
