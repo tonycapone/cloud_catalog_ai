@@ -3,3 +3,5 @@ openai
 streamlit
 streamlit-chat
 boto3>=1.28.2
+beautifulsoup4
+selenium
