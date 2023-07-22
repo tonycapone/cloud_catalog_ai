@@ -44,11 +44,12 @@ try:
     BEDROCK_CLIENT = boto3.client("bedrock", 'us-east-1', 
                                 aws_access_key_id=bedrock_creds["AccessKeyId"], 
                                 aws_secret_access_key=bedrock_creds["SecretAccessKey"], 
-                                aws_session_token=bedrock_creds["SessionToken"])
+                                aws_session_token=bedrock_creds["SessionToken"],
+                                )
     llm = Bedrock(
         client=BEDROCK_CLIENT, 
         model_id="anthropic.claude-v1", 
-        model_kwargs={"temperature":.3, "max_tokens_to_sample": 400}
+        model_kwargs={"temperature":.3, "max_tokens_to_sample": 400, }
     )
 except:
     llm = OpenAI(temperature=0.3, openai_api_key=os.environ["OPENAI_API_KEY"])
@@ -180,8 +181,8 @@ with product_tab:
   #"accept": "application/json",
   #"body": "{\"text_prompts\":[{\"text\":\"John Wick's Revenge Energy Drink - An ultra-caffeinated energy drink inspired by the high-octane action of the John Wick films. Each can contains extracts of exotic herbs and spices from around the globe, hand-selected by John Wick himself, to give you an energy boost for any dangerous mission. The sleek black can features the iconic \\\"Baba Yaga\\\" logo and a list of ingredients in multiple languages to reflect John Wick's international exploits. One sip of this and you'll be ready to take on the Russian mob, the Italian Camorra and anyone else who gets in your way. The perfect fuel for a night of revenge.\"}],\"cfg_scale\":10,\"seed\":0,\"steps\":50}"
 #}
-    product_template = """Generate an brand new innovative and interesting """ + customer_name + """ product idea description 
-    based on the below product idea. Be creative and have fun!
+    product_template = """Generate an brand new innovative, fun, and creative """ + customer_name + """ product idea description 
+    based on the below product idea.  Be sure to format it in Markdown. Do not include any framing language, just the product description.
 
     Product Idea: {idea}
     
@@ -192,15 +193,6 @@ with product_tab:
     )
     chain_type_kwargs = {"prompt": PRODUCT_PROMPT, "stop_sequences": "You are a"}
 
-    # retrieve_chain = RetrievalQA.from_llm(
-    #     llm=llm, 
-    #     retriever=retriever,  # ☜ DOCSEARCH
-    #     verbose=True,
-    #     prompt=PROMPT,
-    #     # chain_type_kwargs=chain_type_kwargs
-    # )
-    # retrieve_chain.verbose = True
-
     product_chain = LLMChain(
         llm=llm, 
         verbose=True, 
@@ -208,7 +200,7 @@ with product_tab:
     )
 
     press_release_template = """
-    Generate a press release for a new product from """ + customer_name + """ based on the below product description.
+    Generate a 4 paragraph press release for a new product from """ + customer_name + """ based on the below product description and format it in Markdown
     {product_description}
 
     Press Release: """
@@ -217,7 +209,6 @@ with product_tab:
     PRESS_RELEASE_PROMPT = PromptTemplate(
         template=press_release_template, input_variables=["product_description"]
     )
-
 
     press_release_chain = LLMChain(llm=llm, verbose=True, prompt=PRESS_RELEASE_PROMPT)
 
@@ -232,51 +223,48 @@ with product_tab:
     st.text_input("What is your product idea?", key="product_input", value="", on_change=submit_product, placeholder="Enter your product here")
 
     if st.session_state["product_idea_input"]:
-        product_description = product_chain(st.session_state["product_idea_input"])["text"]
+        prod_desc_tab, press_release_tab = st.tabs(["Product Description", "Press Release"])
+        with prod_desc_tab:
+            product_description = product_chain(st.session_state["product_idea_input"])["text"]
 
-        st.session_state["product_description"] = product_description
+            st.session_state["product_description"] = product_description
 
-        st.write("")
-        st.header("Product Description")
-        st.write(st.session_state["product_description"])
+            st.write("")
 
-        #{
-  #"modelId": "stability.stable-diffusion-xl",
-  #"contentType": "application/json",
-  #"accept": "application/json",
-  #"body": "{\"text_prompts\":[{\"text\":\"John Wick's Revenge Energy Drink - An ultra-caffeinated energy drink inspired by the high-octane action of the John Wick films. Each can contains extracts of exotic herbs and spices from around the globe, hand-selected by John Wick himself, to give you an energy boost for any dangerous mission. The sleek black can features the iconic \\\"Baba Yaga\\\" logo and a list of ingredients in multiple languages to reflect John Wick's international exploits. One sip of this and you'll be ready to take on the Russian mob, the Italian Camorra and anyone else who gets in your way. The perfect fuel for a night of revenge.\"}],\"cfg_scale\":10,\"seed\":0,\"steps\":50}"
-#}
-        image_response = BEDROCK_CLIENT.invoke_model(
-            modelId="stability.stable-diffusion-xl",
-            contentType="application/json",
-            accept="application/json",
-            body=json.dumps({
-                "text_prompts": [
-                    {
-                        "text": st.session_state["product_description"]
-                    }
-                ],
-                "cfg_scale": 10,
-                "seed": 0,
-                "steps": 50
-            })
-        )
-        print(image_response)
 
-        response_body = json.loads(image_response.get('body').read())
+            
+            image_response = BEDROCK_CLIENT.invoke_model(
+                modelId="stability.stable-diffusion-xl",
+                contentType="application/json",
+                accept="application/json",
+                body=json.dumps({
+                    "text_prompts": [
+                        {
+                            "text": st.session_state["product_description"]
+                        }
+                    ],
+                    "cfg_scale": 10,
+                    "seed": 0,
+                    "steps": 40
+                })
+            )
 
-        image_bytes = response_body['artifacts'][0]["base64"]
-        #save image locally
-        with open("./image.png", "wb") as fh:
-            fh.write(base64.decodebytes(image_bytes.encode()))
-            fh.close()
+            response_body = json.loads(image_response.get('body').read())
 
-        st.image("./image.png", use_column_width=True)
-        st.write("")
-        press_release = press_release_chain(st.session_state["product_description"])
-        st.session_state["press_release"] = press_release["text"]
-        st.header("Press Release")
-        st.write (st.session_state["press_release"])
+            image_bytes = response_body['artifacts'][0]["base64"]
+            #save image locally
+            with open("./image.png", "wb") as fh:
+                fh.write(base64.decodebytes(image_bytes.encode()))
+                fh.close()
+
+            st.image("./image.png", width=200)
+
+            st.write(st.session_state["product_description"])
+        with press_release_tab:
+            st.write("")
+            press_release = press_release_chain(st.session_state["product_description"])
+            st.session_state["press_release"] = press_release["text"]
+            st.write (st.session_state["press_release"])
         st.session_state["product_idea_input"] = None
 
 
