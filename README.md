@@ -66,4 +66,4 @@ Then run `streamlit run main.py` to start the app.
 ## Scraping
 The project uses the V1 verson of the Kendra web-scraper to crawl the customer's URLs. This works in most cases, but there are some situations where the scraper is blocked from some reason. In this case, you can use the provided scraper to crawl the customer's website and upload the results to Kendra.
 
-To use the scraper, cd to scraper
+TODO: Add instructions for using the scraper.
