@@ -25,7 +25,7 @@ bedrock_role = os.environ["BEDROCK_ASSUME_ROLE_ARN"] if "BEDROCK_ASSUME_ROLE_ARN
 logger.info("Kendra index id: " + kendra_index_id)
 logger.info("AWS region: " + aws_region)
 
-
+code_whisperer = boto3
 # Kendra retriever
 retriever = KendraIndexRetriever(
     kendraindex=kendra_index_id,
@@ -37,7 +37,7 @@ retriever = KendraIndexRetriever(
 try: 
     bedrock_creds = boto3.client("sts").assume_role(
     RoleArn=bedrock_role,
-    RoleSessionName="bedrock",)['Credentials']
+    RoleSessionName="bedrock")['Credentials']
 
     logger.info("Obtained Bedrock Temporary Credentials")
     from langchain.llms.bedrock import Bedrock
@@ -59,7 +59,7 @@ if chatbot_logo:
     st.image(chatbot_logo, width=100)
 
     st.subheader(customer_name + " GenAI Demo",)
-assistant_tab, product_tab = st.tabs(["Assistant", "Product Ideator"])
+assistant_tab, product_tab, code_generator_tab = st.tabs(["Assistant", "Product Ideator", "Code Generation"])
 
 with assistant_tab:
     # Prompt template for internal data bot interface
@@ -175,12 +175,33 @@ with product_tab:
     def submit_product():
         st.session_state['product_idea_input'] = st.session_state['product_input']
         st.session_state['product_input'] = ""
-            #{
-  #"modelId": "stability.stable-diffusion-xl",
-  #"contentType": "application/json",
-  #"accept": "application/json",
-  #"body": "{\"text_prompts\":[{\"text\":\"John Wick's Revenge Energy Drink - An ultra-caffeinated energy drink inspired by the high-octane action of the John Wick films. Each can contains extracts of exotic herbs and spices from around the globe, hand-selected by John Wick himself, to give you an energy boost for any dangerous mission. The sleek black can features the iconic \\\"Baba Yaga\\\" logo and a list of ingredients in multiple languages to reflect John Wick's international exploits. One sip of this and you'll be ready to take on the Russian mob, the Italian Camorra and anyone else who gets in your way. The perfect fuel for a night of revenge.\"}],\"cfg_scale\":10,\"seed\":0,\"steps\":50}"
-#}
+        product_description = product_chain(st.session_state["product_idea_input"])["text"]
+
+        st.session_state["product_description"] = product_description
+        image_response = BEDROCK_CLIENT.invoke_model(
+                modelId="stability.stable-diffusion-xl",
+                contentType="application/json",
+                accept="application/json",
+                body=json.dumps({
+                    "text_prompts": [
+                        {
+                            "text": st.session_state["product_description"]
+                        }
+                    ],
+                    "cfg_scale": 10,
+                    "seed": 0,
+                    "steps": 40
+                })
+            )
+
+        response_body = json.loads(image_response.get('body').read())
+
+        image_bytes = response_body['artifacts'][0]["base64"]
+        #save image locally
+        with open("./image.png", "wb") as fh:
+            fh.write(base64.decodebytes(image_bytes.encode()))
+            fh.close()
+
     product_template = """Generate an brand new innovative, fun, and creative """ + customer_name + """ product idea description 
     based on the below product idea.  Be sure to format it in Markdown. Do not include any framing language, just the product description.
 
@@ -225,47 +246,34 @@ with product_tab:
     if st.session_state["product_idea_input"]:
         prod_desc_tab, press_release_tab = st.tabs(["Product Description", "Press Release"])
         with prod_desc_tab:
-            product_description = product_chain(st.session_state["product_idea_input"])["text"]
-
-            st.session_state["product_description"] = product_description
-
             st.write("")
-
-
             
-            image_response = BEDROCK_CLIENT.invoke_model(
-                modelId="stability.stable-diffusion-xl",
-                contentType="application/json",
-                accept="application/json",
-                body=json.dumps({
-                    "text_prompts": [
-                        {
-                            "text": st.session_state["product_description"]
-                        }
-                    ],
-                    "cfg_scale": 10,
-                    "seed": 0,
-                    "steps": 40
-                })
-            )
-
-            response_body = json.loads(image_response.get('body').read())
-
-            image_bytes = response_body['artifacts'][0]["base64"]
-            #save image locally
-            with open("./image.png", "wb") as fh:
-                fh.write(base64.decodebytes(image_bytes.encode()))
-                fh.close()
-
             st.image("./image.png", width=200)
-
+                    
             st.write(st.session_state["product_description"])
         with press_release_tab:
             st.write("")
             press_release = press_release_chain(st.session_state["product_description"])
             st.session_state["press_release"] = press_release["text"]
             st.write (st.session_state["press_release"])
-        st.session_state["product_idea_input"] = None
+  
+        # with code_generator_tab:
+        #     st.subheader("Code Generator")
+        #     st.write("Use this tool to generate code for your product.")
+        #     st.write("")
+        #     st.write("")
+        #     lambda_event = {
+        #        "product_title": st.session_state["product_idea_input"],
+        #        "product_description": st.session_state["product_description"],
+
+        #     }
+        #     st.code(json.dumps(lambda_event), language="json")
+        #     st.write("https://us-east-1.console.aws.amazon.com/lambda/home?region=us-east-1#/functions/KB-7-Eleven-KendraStack-productUploadLambda0EED038-pONJ8Z4qKvUM?tab=code")
+
+            def submit_code():
+                st.session_state['code_input'] = st.session_state['code_input']
+                st.session_state['code_input'] = ""
+                #{
 
 
 
