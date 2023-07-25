@@ -59,7 +59,7 @@ if chatbot_logo:
     st.image(chatbot_logo, width=100)
 
     st.subheader(customer_name + " GenAI Demo",)
-assistant_tab, product_tab, code_generator_tab = st.tabs(["Assistant", "Product Ideator", "Code Generation"])
+assistant_tab, product_tab = st.tabs(["Assistant", "Product Ideator"])
 
 with assistant_tab:
     # Prompt template for internal data bot interface
@@ -256,27 +256,6 @@ with product_tab:
             press_release = press_release_chain(st.session_state["product_description"])
             st.session_state["press_release"] = press_release["text"]
             st.write (st.session_state["press_release"])
-  
-        # with code_generator_tab:
-        #     st.subheader("Code Generator")
-        #     st.write("Use this tool to generate code for your product.")
-        #     st.write("")
-        #     st.write("")
-        #     lambda_event = {
-        #        "product_title": st.session_state["product_idea_input"],
-        #        "product_description": st.session_state["product_description"],
-
-        #     }
-        #     st.code(json.dumps(lambda_event), language="json")
-        #     st.write("https://us-east-1.console.aws.amazon.com/lambda/home?region=us-east-1#/functions/KB-7-Eleven-KendraStack-productUploadLambda0EED038-pONJ8Z4qKvUM?tab=code")
-
-            def submit_code():
-                st.session_state['code_input'] = st.session_state['code_input']
-                st.session_state['code_input'] = ""
-                #{
-
-
-
 
 
 
