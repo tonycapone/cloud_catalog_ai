@@ -1,6 +1,7 @@
 import boto3
-
+import os
 class KendraPipeline:
+    index_id = os.environ['KENDRA_INDEX_ID']
     def open_spider(self, spider):
         self.kendra = boto3.client('kendra')
 
@@ -14,7 +15,7 @@ class KendraPipeline:
         }
         print(document)
         self.kendra.batch_put_document(
-            IndexId='9f4b36a9-0945-41c1-b77c-9e80c42e6962',
+            IndexId=self.index_id,
             RoleArn='arn:aws:iam::543999415209:role/KB-JCPenny-KendraStack-KendraRole9C3D9CF0-RCLYOK6NFOEW',
             Documents=[{
                 'Id': item['url'],
