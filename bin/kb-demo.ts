@@ -15,6 +15,7 @@ const app = new cdk.App();
 
 const extractConfig = () => {
   const scrapeUrls = app.node.tryGetContext('scrapeUrls')
+  
   if (scrapeUrls === undefined) {
     console.warn('*** ⛔️ WARNING: You must provide a valid scrapeUrl   ***')
     console.warn('*** you can do this by editing cdk.context.json 🚀            ***')
@@ -63,7 +64,7 @@ console.log(`*** 🚀 Starting deployment for ${config.customerName} ***`)
 console.log(`*** 🚀 Scraping ${config.scrapeUrls} ***`)
 
 const kendaStack = new KbKendraStack(app, `KB-${config.customerName}-KendraStack`.replace(" ", "-"), {
-  scrapeUrls: config.scrapeUrls.split(","),
+  scrapeUrls: (config.scrapeUrls + "").split(","),
   customerName: config.customerName.replace(" ", "-")
 });
 
