@@ -14,6 +14,7 @@ interface KbStreamlitAppStackProps extends cdk.StackProps {
     customerName: string;
     customerFavicon: string;
     customerLogo: string;
+    customerIndustry: string;
 }
 class KbStreamlitAppStack extends cdk.Stack {
 
@@ -61,7 +62,8 @@ class KbStreamlitAppStack extends cdk.Stack {
                     "KENDRA_INDEX_ID": props.kendraIndexId,
                     "CUSTOMER_NAME": props.customerName,
                     "FAVICON_URL": props.customerFavicon,
-                    "LOGO_URL": props.customerLogo
+                    "LOGO_URL": props.customerLogo,
+                    "CUSTOMER_INDUSTRY": props.customerIndustry
                 },
                 containerPort: 8501
             },

@@ -6,3 +6,5 @@ boto3>=1.28.2
 beautifulsoup4
 selenium
 pyyaml==6.0.1
+pandas
+pandasql

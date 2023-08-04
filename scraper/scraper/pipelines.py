@@ -9,9 +9,11 @@ class KendraPipeline:
         del self.kendra
 
     def process_item(self, item, spider):
+        if item['title'] is None:
+            item['title'] = item['url']
         document = {
             'Title': item['title'],
-            'Blob': bytes(' '.join(item['content']), 'utf-8'),
+            'Blob': item['content']
         }
         print(document)
         self.kendra.batch_put_document(

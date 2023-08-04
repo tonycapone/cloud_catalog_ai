@@ -46,6 +46,12 @@ const extractConfig = () => {
       throw new Error("Missing bedrockRoleArn or openAIAPIKey")
     }
   }
+  const customerIndustry = app.node.tryGetContext('customerIndustry')
+  if (customerIndustry === undefined) {
+    console.warn('*** ⛔️ WARNING: You must provide a valid customerIndustry   ***')
+    console.warn('*** you can do this by editing cdk.context.json 🚀            ***')
+    throw new Error("Missing customerIndustry")
+  }
   
 
   return {
@@ -54,7 +60,8 @@ const extractConfig = () => {
     openAIAPIKey,
     customerFavicon,
     customerLogo,
-    bedrockRoleARN
+    bedrockRoleARN,
+    customerIndustry
   }
 }
 
@@ -74,6 +81,7 @@ new KbStreamlitAppStack (app, `KB-${config.customerName}-AppStack`.replace(" ", 
   customerName: config.customerName,
   customerFavicon: config.customerFavicon,
   customerLogo: config.customerLogo,
-  bedrockRoleARN: config.bedrockRoleARN
+  bedrockRoleARN: config.bedrockRoleARN,
+  customerIndustry: config.customerIndustry
 })
 

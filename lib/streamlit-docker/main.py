@@ -9,9 +9,12 @@ import base64
 from aws_langchain.kendra_index_retriever import KendraIndexRetriever
 from langchain.prompts import PromptTemplate
 from langchain.chains import ConversationalRetrievalChain
-from langchain.chains import RetrievalQA
 from langchain.chains import LLMChain
 from streamlit.logger import get_logger
+import pandas as pd
+from pandasql import sqldf
+import re
+from botocore.config import Config
 
 logger = get_logger(__name__)
 
@@ -21,6 +24,7 @@ customer_name = os.environ["CUSTOMER_NAME"]
 favicon_url = os.environ["FAVICON_URL"] if "FAVICON_URL" in os.environ else None
 chatbot_logo = os.environ["LOGO_URL"] if "LOGO_URL" in os.environ else None
 bedrock_role = os.environ["BEDROCK_ASSUME_ROLE_ARN"] if "BEDROCK_ASSUME_ROLE_ARN" in os.environ else None
+customer_industry = os.environ["CUSTOMER_INDUSTRY"] if "CUSTOMER_INDUSTRY" in os.environ else None
 
 logger.info("Kendra index id: " + kendra_index_id)
 logger.info("AWS region: " + aws_region)
@@ -41,15 +45,23 @@ try:
 
     logger.info("Obtained Bedrock Temporary Credentials")
     from langchain.llms.bedrock import Bedrock
+    config = Config(
+        retries = {
+      'max_attempts': 10,
+      'mode': 'adaptive'
+   }
+)
     BEDROCK_CLIENT = boto3.client("bedrock", 'us-east-1', 
                                 aws_access_key_id=bedrock_creds["AccessKeyId"], 
                                 aws_secret_access_key=bedrock_creds["SecretAccessKey"], 
                                 aws_session_token=bedrock_creds["SessionToken"],
+                                config=config
                                 )
     llm = Bedrock(
         client=BEDROCK_CLIENT, 
         model_id="anthropic.claude-v1", 
-        model_kwargs={"temperature":.3, "max_tokens_to_sample": 400, }
+        model_kwargs={"temperature":.3, "max_tokens_to_sample": 1200 },
+        verbose=True
     )
 except:
     llm = OpenAI(temperature=0.3, openai_api_key=os.environ["OPENAI_API_KEY"])
@@ -59,7 +71,7 @@ if chatbot_logo:
     st.image(chatbot_logo, width=100)
 
     st.subheader(customer_name + " GenAI Demo",)
-assistant_tab, product_tab = st.tabs(["Assistant", "Product Ideator"])
+assistant_tab, product_tab, query_tab = st.tabs(["Assistant", "Product Ideator", "Data Query"])
 
 with assistant_tab:
     # Prompt template for internal data bot interface
@@ -113,40 +125,37 @@ with assistant_tab:
         st.session_state["chat_history"] = []
 
     def submit():
-        st.session_state['user_input'] = st.session_state['input']
+        user_input = st.session_state['input']
         st.session_state['input'] = ""
 
-
-    user_input = st.session_state['user_input'] if 'user_input' in st.session_state else None
-
-    if user_input:
-        st.session_state.past.append(user_input)
-        # output = chain.run(input=user_input)
-        result = qa({"question":user_input, "chat_history": st.session_state["chat_history"]})
-        logger.info(result)
-        if("I apologize" not in result ["answer"] and "I don't know" not in result["answer"] and len(result['source_documents']) > 0):
-            print(result['source_documents'])
-            response_text = """
+        if user_input:
+            st.session_state.past.append(user_input)
+            # output = chain.run(input=user_input)
+            result = qa({"question":user_input, "chat_history": st.session_state["chat_history"]})
+            logger.info(result)
+            if("I apologize" not in result ["answer"] and "I don't know" not in result["answer"] and len(result['source_documents']) > 0):
+                print(result['source_documents'])
+                response_text = """
 {}
 
 You might find these links helpful:
 
 """.format(result["answer"].strip())
-            for source in result['source_documents']:
-                if source.metadata['title'] not in response_text:
-                    response_text += f"[\"{source.metadata['title']}\"]({source.metadata['source']})\n"
-            
-            logger.info(response_text)
-            st.session_state["chat_history"].append((user_input, result["answer"]))
-        else:
-            response_text = "Sorry, I don't know the answer to that question."
-        logger.info("Condensed query: " + result["generated_question"])
-        logger.info("Response text: " + response_text)
-        st.session_state.generated.append(f'{response_text}')
-        st.session_state.condensed_query = result["generated_question"]
-        #remove old chat history older than 2 messages
-        if len(st.session_state["chat_history"]) > 2:
-            st.session_state["chat_history"].pop(0)
+                for source in result['source_documents']:
+                    if source.metadata['title'] not in response_text:
+                        response_text += f"[\"{source.metadata['title']}\"]({source.metadata['source']})\n"
+                
+                logger.info(response_text)
+                st.session_state["chat_history"].append((user_input, result["answer"]))
+            else:
+                response_text = "Sorry, I don't know the answer to that question."
+            logger.info("Condensed query: " + result["generated_question"])
+            logger.info("Response text: " + response_text)
+            st.session_state.generated.append(f'{response_text}')
+            st.session_state.condensed_query = result["generated_question"]
+            #remove old chat history older than 2 messages
+            if len(st.session_state["chat_history"]) > 2:
+                st.session_state["chat_history"].pop(0)
 
 
     if st.session_state["generated"]:
@@ -258,5 +267,111 @@ with product_tab:
             st.write (st.session_state["press_release"])
 
 
+with query_tab:
+    if "sql_query" not in st.session_state:
+        st.session_state["sql_query"] = ""
+    products_schema_template = """"
+    Generate a basic database schema with exactly 5 columns for a database table containing a list of products or services from """ + customer_name +  """, who is in the """ + customer_industry + """ industry.
+    Only generate the schema, no explanatory language please.  """
+
+    json_template = """{schema}
+    Generate a JSON array of exactly 10 products from """ + customer_name +  """, who is in the """ + customer_industry + """ industry, 
+    in the above table, in JSON format. No explanatory language please.""" 
+
+    sql_template = """
+    Generate a SQLite compatible SELECT statement that queries the below table and achieves the following result 
+    
+    table: {schema}
+    
+    request {sql_request}
+    No explanatory language please, just the SELECT query. DO NOT include any additional SQL statements, just the SELECT statement.
+
+    sql query:
+    """
+    schema_prompt = PromptTemplate(
+        template=products_schema_template, input_variables=[]
+    )
+
+    json_prompt = PromptTemplate(
+        template=json_template, input_variables=["schema"], stop_sequences=["]"]
+    )
+
+    sql_prompt = PromptTemplate(
+        template=sql_template, input_variables=["schema", "sql_request"], stop_sequences=[";"]
+    )
+
+    schema_chain = LLMChain(
+        llm=llm,
+        verbose=True,
+        prompt=schema_prompt,
+        llm_kwargs={"stop_sequences": ["Generate"]},
+    )
+
+    sql_chain = LLMChain(
+        llm=llm, 
+        verbose=True, 
+        prompt=sql_prompt,
+        llm_kwargs={'stop_sequences': [';', "Generate"]})
+    json_chain = LLMChain(
+        llm=llm, 
+        verbose=True, 
+        prompt=json_prompt,
+        llm_kwargs={'stop_sequences': [']']})
+
+    # @st.cache_data
+    # def load_product_schema():
+    #     print("loading schema")
+    #     schema = schema_chain(inputs={})
+    #     print("schema loaded")
+    #     print(schema)
+    #     return schema['text']
+    
+    @st.cache_data
+    def load_product_list():
+        products= json_chain(schema)["text"]
+        print(products)
+        products_table = json.loads(products + "]")
+        return products_table
+        
+    schema = """
+id INT PRIMARY KEY
+name VARCHAR(50)
+description TEXT
+price DECIMAL(10,2)
+category VARCHAR(20)
+created_at DATETIME
+available BOOLEAN
+    """
+
+    df = pd.DataFrame(st.session_state["products_table"])
+    with st.expander("Data", expanded=False):
+        st.table(df)
+    def products_text_onchange():
+        st.session_state["products_table"] = json.loads(st.session_state["products_text_input"])
+
+    def submit_sql():
+        sql_request = st.session_state["sql_request_input"]
+        st.session_state["sql_request_input"] = ""
+        sql_query = sql_chain.predict(schema=schema, sql_request=sql_request)
+        # use a regex to replace the table name with 'df'
+        sql_query = re.sub(r'(?<=FROM )\w+', 'df', sql_query, flags=re.IGNORECASE)
+        logger.info(sql_query)
+        st.session_state["sql_query"] = sql_query
+
+    sql_request = st.text_input("Enter a question about the above data:", value="", on_change=submit_sql, key="sql_request_input", placeholder="Enter your SQL query here")
+    if st.session_state["sql_query"]:
+        st.subheader("SQL Query")
+        st.write(st.session_state["sql_query"])
+        st.write("")
+        st.subheader("SQL Results")
+        st.write(sqldf(st.session_state["sql_query"], globals()))    
+    with st.expander("Debug", expanded=False):
+        st.subheader("Schema")
+        st.write(schema)
+        st.subheader("Products")
+        #format json for products table
+        text = json.dumps(st.session_state["products_table"], indent=4)
+        st.text_area(value=text, key="products_text_input", on_change=products_text_onchange, label="Products")
+        st.write(st.session_state)
 
 
