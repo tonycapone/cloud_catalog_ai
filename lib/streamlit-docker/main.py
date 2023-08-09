@@ -57,6 +57,7 @@ try:
                                 aws_session_token=bedrock_creds["SessionToken"],
                                 config=config
                                 )
+    print(BEDROCK_CLIENT.list_foundation_models())
     llm = Bedrock(
         client=BEDROCK_CLIENT, 
         model_id="anthropic.claude-v1", 
@@ -270,26 +271,100 @@ with product_tab:
 with query_tab:
     if "sql_query" not in st.session_state:
         st.session_state["sql_query"] = ""
+    junction_schema_temmplate = """
+    Generate a database schema for a junction table called "junction_table" containg the ids for the below tables. Assume the ids for both tables are integers 0-9
+    {table1}
+    {table2}
+    """
+
     products_schema_template = """"
-    Generate a basic database schema with exactly 5 columns for a database table containing a list of products or services from """ + customer_name +  """, who is in the """ + customer_industry + """ industry.
+    Generate a basic database schema for exactly 1 table called "{schema_type}_table" with exactly 5 columns for a database table containing a list of {schema_type} from """ + customer_name +  """, who is in the """ + customer_industry + """ industry.
     Only generate the schema, no explanatory language please.  """
 
     json_template = """{schema}
-    Generate a JSON array of exactly 10 products from """ + customer_name +  """, who is in the """ + customer_industry + """ industry, 
+    Generate a JSON array of exactly 10 items from """ + customer_name +  """, who is in the """ + customer_industry + """ industry, 
     in the above table, in JSON format. No explanatory language please.""" 
 
     sql_template = """
-    Generate a SQLite compatible SELECT statement that queries the below table and achieves the following result 
+    Generate a SQLite compatible SELECT statement that queries the below tables and achieves the following result 
     
-    table: {schema}
+    tables: 
+    {table1}
+    {table2}
+    {table3}
+
     
     request {sql_request}
     No explanatory language please, just the SELECT query. DO NOT include any additional SQL statements, just the SELECT statement.
 
     sql query:
     """
+    const junction_table = """
+[
+    {
+        "product_id": 1,
+        "customer_id": 5
+    },
+    {
+        "product_id": 2,
+        "customer_id": 5
+    },
+    {
+        "product_id": 3,
+        "customer_id": 5
+    },
+    {
+        "product_id": 4,
+        "customer_id": 5
+    },
+    {
+        "product_id": 5,
+        "customer_id": 5
+    },
+    {
+        "product_id": 6,
+        "customer_id": 5
+    },
+    {
+        "product_id": 7,
+        "customer_id": 5
+    },
+    {
+        "product_id": 8,
+        "customer_id": 5
+    },
+    {
+        "product_id": 9,
+        "customer_id": 5
+    },
+    {
+        "product_id": 10,
+        "customer_id": 5
+    },
+    {
+        "product_id": 2,
+        "customer_id": 6
+    },
+    {
+        "product_id": 3,
+        "customer_id": 7
+    },
+    {
+        "product_id": 4,
+        "customer_id": 8
+    },
+    {
+        "product_id": 1,
+        "customer_id": 9
+    },
+    {
+        "product_id": 5,
+        "customer_id": 2
+    }, 
+]
+"""
     schema_prompt = PromptTemplate(
-        template=products_schema_template, input_variables=[]
+        template=products_schema_template, input_variables=["schema_type"]
     )
 
     json_prompt = PromptTemplate(
@@ -297,7 +372,10 @@ with query_tab:
     )
 
     sql_prompt = PromptTemplate(
-        template=sql_template, input_variables=["schema", "sql_request"], stop_sequences=[";"]
+        template=sql_template, input_variables=["table1", "table2", "table3", "sql_request"], stop_sequences=[";"]
+    )
+    junction_schema_temmplate = PromptTemplate(
+        template=junction_schema_temmplate, input_variables=["table1", "table2"]
     )
 
     schema_chain = LLMChain(
@@ -317,48 +395,108 @@ with query_tab:
         verbose=True, 
         prompt=json_prompt,
         llm_kwargs={'stop_sequences': [']']})
-
-    # @st.cache_data
-    # def load_product_schema():
-    #     print("loading schema")
-    #     schema = schema_chain(inputs={})
-    #     print("schema loaded")
-    #     print(schema)
-    #     return schema['text']
     
+    junction_schema_chain = LLMChain(
+        llm=llm,
+        verbose=True,
+        prompt=junction_schema_temmplate,
+        llm_kwargs={"stop_sequences": ["Generate"]})
+
+
+    @st.cache_data
+    def load_product_schema():
+        print("loading schema")
+        schema = schema_chain(inputs={"schema_type":"products"})
+        print("schema loaded")
+        print(schema)
+        return schema['text']
+    
+    if "product_schema" not in st.session_state:
+        st.session_state["product_schema"] = load_product_schema()
+
     @st.cache_data
     def load_product_list():
-        products= json_chain(schema)["text"]
+        products= json_chain(st.session_state['product_schema'])["text"]
         print(products)
         products_table = json.loads(products + "]")
         return products_table
-        
-    schema = """
-id INT PRIMARY KEY
-name VARCHAR(50)
-description TEXT
-price DECIMAL(10,2)
-category VARCHAR(20)
-created_at DATETIME
-available BOOLEAN
-    """
+    @st.cache_data
+    def load_customers_schema():
+        print("loading schema")
+        schema = schema_chain(inputs={"schema_type":"customers"})
+        print("schema loaded")
+        print(schema)
+        return schema['text']
+    @st.cache_data
+    def load_customers_list():
+        customers= json_chain(st.session_state['customers_schema'])["text"]
+        print(customers)
+        customers_table = json.loads(customers + "]")
+        return customers_table
+    @st.cache_data
+    def load_junction_schema():
+        print("loading schema")
+        schema = junction_schema_chain(inputs={"table1":"products", "table2":"customers"})
+        print("schema loaded")
+        print(schema)
+        return schema['text']
+    @st.cache_data
+    def load_junction_table():
+        junction_table= json_chain(st.session_state['junction_schema'])["text"]
+        print(junction_table)
+        junction_table = json.loads(junction_table + "]")
+        return junction_table
 
-    df = pd.DataFrame(st.session_state["products_table"])
+#     schema = """
+# id INT PRIMARY KEY
+# name VARCHAR(50)
+# description TEXT
+# price DECIMAL(10,2)
+# category VARCHAR(20)
+# created_at DATETIME
+# available BOOLEAN
+#     """
+    
+    if "products_table" not in st.session_state:
+        st.session_state["products_table"] = load_product_list()
+    if "customers_schema" not in st.session_state:
+        st.session_state["customers_schema"] = load_customers_schema()
+    if "customers_table" not in st.session_state:
+        st.session_state["customers_table"] = load_customers_list()
+    if "junction_schema" not in st.session_state:
+        st.session_state["junction_schema"] = load_junction_schema()
+    if "junction_table" not in st.session_state:
+        st.session_state["junction_table"] = load_junction_table()
+
+    products_table = pd.DataFrame(st.session_state["products_table"])
+    customers_table = pd.DataFrame(st.session_state["customers_table"])
+    junction_table = pd.DataFrame(st.session_state["junction_table"])
+
     with st.expander("Data", expanded=False):
-        st.table(df)
+        st.table(products_table)
+        st.table(customers_table)
+        st.table(junction_table)
+    
     def products_text_onchange():
         st.session_state["products_table"] = json.loads(st.session_state["products_text_input"])
+    def customers_text_onchange():
+        st.session_state["customers_table"] = json.loads(st.session_state["customers_text_input"])
+    def junction_text_onchange():
+        st.session_state["junction_table"] = json.loads(st.session_state["junction_text_input"])
 
     def submit_sql():
         sql_request = st.session_state["sql_request_input"]
         st.session_state["sql_request_input"] = ""
-        sql_query = sql_chain.predict(schema=schema, sql_request=sql_request)
+        sql_query = sql_chain.predict(table1=st.session_state["product_schema"], 
+                                      table2=st.session_state["customers_schema"], 
+                                      table3=st.session_state["junction_schema"], 
+                                      sql_request=sql_request)
         # use a regex to replace the table name with 'df'
-        sql_query = re.sub(r'(?<=FROM )\w+', 'df', sql_query, flags=re.IGNORECASE)
+        # sql_query = re.sub(r'(?<=FROM )\w+', 'df', sql_query, flags=re.IGNORECASE)
         logger.info(sql_query)
         st.session_state["sql_query"] = sql_query
 
-    sql_request = st.text_input("Enter a question about the above data:", value="", on_change=submit_sql, key="sql_request_input", placeholder="Enter your SQL query here")
+    sql_request = st.text_input("Enter a question about the above data:", value="", on_change=submit_sql, key="sql_request_input", placeholder="Enter your query here")
     if st.session_state["sql_query"]:
         st.subheader("SQL Query")
         st.write(st.session_state["sql_query"])
@@ -367,11 +505,18 @@ available BOOLEAN
         st.write(sqldf(st.session_state["sql_query"], globals()))    
     with st.expander("Debug", expanded=False):
         st.subheader("Schema")
-        st.write(schema)
+        st.write(st.session_state["product_schema"])
         st.subheader("Products")
         #format json for products table
-        text = json.dumps(st.session_state["products_table"], indent=4)
-        st.text_area(value=text, key="products_text_input", on_change=products_text_onchange, label="Products")
+        products = json.dumps(st.session_state["products_table"], indent=4)
+        st.text_area(value=products, key="products_text_input", on_change=products_text_onchange, label="Products")
+        st.subheader("Customers")
+        customers = json.dumps(st.session_state["customers_table"], indent=4)
+        st.text_area(value=customers, key="customers_text_input", on_change=customers_text_onchange, label="Customers")
+        st.subheader("Junction")
+        junction = json.dumps(st.session_state["junction_table"], indent=4)
+        st.text_area(value=junction, key="junction_text_input", on_change=junction_text_onchange, label="Junction")
+        st.subheader("Session State")
         st.write(st.session_state)
 
 
