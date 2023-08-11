@@ -70,7 +70,7 @@ const config = extractConfig();
 console.log(`*** 🚀 Starting deployment for ${config.customerName} ***`)
 console.log(`*** 🚀 Scraping ${config.scrapeUrls} ***`)
 
-const kendaStack = new KbKendraStack(app, `KB-${config.customerName}-KendraStack`.replace(" ", "-"), {
+const kendaStack = new KbKendraStack(app, `KB-${config.customerName}-KendraStack`.replace("&", "").replace(" ", "-"), {
   scrapeUrls: (config.scrapeUrls + "").split(","),
   customerName: config.customerName.replace(" ", "-")
 });
