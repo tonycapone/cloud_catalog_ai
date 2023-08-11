@@ -75,7 +75,7 @@ const kendaStack = new KbKendraStack(app, `KB-${config.customerName}-KendraStack
   customerName: config.customerName.replace(" ", "-")
 });
 
-new KbStreamlitAppStack (app, `KB-${config.customerName}-AppStack`.replace(" ", "-"), {
+new KbStreamlitAppStack (app, `KB-${config.customerName}-AppStack`.replace(" & ", "").replace(" ", "-"), {
   kendraIndexId: kendaStack.kendraIndexId,
   openAIAPIKey: config.openAIAPIKey,
   customerName: config.customerName,
