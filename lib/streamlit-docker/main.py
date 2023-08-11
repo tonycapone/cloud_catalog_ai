@@ -271,7 +271,7 @@ with product_tab:
 with query_tab:
     if "sql_query" not in st.session_state:
         st.session_state["sql_query"] = ""
-    junction_schema_temmplate = """
+    junction_schema_template = """
     Generate a database schema for a junction table called "junction_table" containg the ids for the below tables. Assume the ids for both tables are integers 0-9
     {table1}
     {table2}
@@ -282,11 +282,18 @@ with query_tab:
     Only generate the schema, no explanatory language please.  """
 
     json_template = """{schema}
-    Generate a JSON array of exactly 10 items from """ + customer_name +  """, who is in the """ + customer_industry + """ industry, 
-    in the above table, in JSON format. No explanatory language please.""" 
+    Generate a JSON array of exactly 10 items from the above table. The items should resemble something that would belong to """ + customer_name +  """, who is in the """ + customer_industry + """ industry, 
+    Print it in JSON format The ids should number 0-9. No explanatory language please.
+    [""" 
+
+    junction_item_template = """{schema}
+    Generate a JSON array of from a junction table with exactly 20 items from """ + customer_name +  """, who is in the """ + customer_industry + """ industry,
+    in the above table, in JSON format. The ids will be numbered 0-9, Be sure to use a combination of ids from both tables. No explanatory language, just the JSON.
+    ["""
+
 
     sql_template = """
-    Generate a SQLite compatible SELECT statement that queries the below tables and achieves the following result 
+    Generate a SQLite compatible SELECT statement that queries the below tables and achieves the following result. Be sure to alias any columns that are identifical. 
     
     tables: 
     {table1}
@@ -299,70 +306,13 @@ with query_tab:
 
     sql query:
     """
-    const junction_table = """
-[
-    {
-        "product_id": 1,
-        "customer_id": 5
-    },
-    {
-        "product_id": 2,
-        "customer_id": 5
-    },
-    {
-        "product_id": 3,
-        "customer_id": 5
-    },
-    {
-        "product_id": 4,
-        "customer_id": 5
-    },
-    {
-        "product_id": 5,
-        "customer_id": 5
-    },
-    {
-        "product_id": 6,
-        "customer_id": 5
-    },
-    {
-        "product_id": 7,
-        "customer_id": 5
-    },
-    {
-        "product_id": 8,
-        "customer_id": 5
-    },
-    {
-        "product_id": 9,
-        "customer_id": 5
-    },
-    {
-        "product_id": 10,
-        "customer_id": 5
-    },
-    {
-        "product_id": 2,
-        "customer_id": 6
-    },
-    {
-        "product_id": 3,
-        "customer_id": 7
-    },
-    {
-        "product_id": 4,
-        "customer_id": 8
-    },
-    {
-        "product_id": 1,
-        "customer_id": 9
-    },
-    {
-        "product_id": 5,
-        "customer_id": 2
-    }, 
-]
-"""
+
+    explanation_template = """
+    Answer the below question directly with the results from the SQL query below in plain English. Do not include any SQL tables or queries in your answer. Just plain english. 
+    Question: {question}
+    Query Result: {query_result}
+    Answer: """
+
     schema_prompt = PromptTemplate(
         template=products_schema_template, input_variables=["schema_type"]
     )
@@ -372,11 +322,18 @@ with query_tab:
     )
 
     sql_prompt = PromptTemplate(
-        template=sql_template, input_variables=["table1", "table2", "table3", "sql_request"], stop_sequences=[";"]
+        template=sql_template, input_variables=["table1", "table2", "table3", "sql_request"]
     )
-    junction_schema_temmplate = PromptTemplate(
-        template=junction_schema_temmplate, input_variables=["table1", "table2"]
+    junction_schema_prompt = PromptTemplate(
+        template=junction_schema_template, input_variables=["table1", "table2"]
     )
+    junction_item_prompt = PromptTemplate(
+        template=junction_item_template, input_variables=["schema"]
+    )
+    explanation_prompt = PromptTemplate(
+        template=explanation_template, input_variables=["question", "query_result"]
+    )
+
 
     schema_chain = LLMChain(
         llm=llm,
@@ -399,8 +356,19 @@ with query_tab:
     junction_schema_chain = LLMChain(
         llm=llm,
         verbose=True,
-        prompt=junction_schema_temmplate,
+        prompt=junction_schema_prompt,
         llm_kwargs={"stop_sequences": ["Generate"]})
+    junction_item_chain = LLMChain(
+        llm=llm,
+        verbose=True,
+        prompt=junction_item_prompt,
+        llm_kwargs={"stop_sequences": ["]", "Generate"]})
+    explanation_chain = LLMChain(
+        llm=llm,
+        verbose=True,
+        prompt=explanation_prompt,
+        llm_kwargs={"stop_sequences": ["Generate"]})
+    
 
 
     @st.cache_data
@@ -418,7 +386,7 @@ with query_tab:
     def load_product_list():
         products= json_chain(st.session_state['product_schema'])["text"]
         print(products)
-        products_table = json.loads(products + "]")
+        products_table = json.loads("["+products + "]")
         return products_table
     @st.cache_data
     def load_customers_schema():
@@ -431,7 +399,7 @@ with query_tab:
     def load_customers_list():
         customers= json_chain(st.session_state['customers_schema'])["text"]
         print(customers)
-        customers_table = json.loads(customers + "]")
+        customers_table = json.loads("["+customers + "]")
         return customers_table
     @st.cache_data
     def load_junction_schema():
@@ -442,9 +410,9 @@ with query_tab:
         return schema['text']
     @st.cache_data
     def load_junction_table():
-        junction_table= json_chain(st.session_state['junction_schema'])["text"]
+        junction_table= junction_item_chain(st.session_state['junction_schema'])["text"]
         print(junction_table)
-        junction_table = json.loads(junction_table + "]")
+        junction_table = json.loads("[" + junction_table + "]")
         return junction_table
 
 #     schema = """
@@ -467,6 +435,8 @@ with query_tab:
         st.session_state["junction_schema"] = load_junction_schema()
     if "junction_table" not in st.session_state:
         st.session_state["junction_table"] = load_junction_table()
+    if "question" not in st.session_state:
+        st.session_state["question"] = ""
 
     products_table = pd.DataFrame(st.session_state["products_table"])
     customers_table = pd.DataFrame(st.session_state["customers_table"])
@@ -486,6 +456,8 @@ with query_tab:
 
     def submit_sql():
         sql_request = st.session_state["sql_request_input"]
+        st.session_state["question"] = sql_request
+        #clear the text input so that subsequent actions don't retrigger the onchange
         st.session_state["sql_request_input"] = ""
         sql_query = sql_chain.predict(table1=st.session_state["product_schema"], 
                                       table2=st.session_state["customers_schema"], 
@@ -502,7 +474,11 @@ with query_tab:
         st.write(st.session_state["sql_query"])
         st.write("")
         st.subheader("SQL Results")
-        st.write(sqldf(st.session_state["sql_query"], globals()))    
+        query_result = sqldf(st.session_state["sql_query"], globals())
+        st.write(query_result)    
+        st.subheader("Answer")
+        answer = explanation_chain(inputs={"question":st.session_state["question"], "query_result":query_result.to_dict(orient="records")})
+        st.write(answer["text"])
     with st.expander("Debug", expanded=False):
         st.subheader("Schema")
         st.write(st.session_state["product_schema"])
