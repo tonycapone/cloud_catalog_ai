@@ -8,6 +8,7 @@ env:
     BEDROCK_ASSUME_ROLE_ARN: ""
     OPENAI_API_KEY: ""
     CUSTOMER_FAVICON_URL: ""
+    CUSTOMER_INDUSTRY: ""
 
 phases:
   pre_build:
@@ -19,7 +20,8 @@ phases:
           "customerLogo": "'$CUSTOMER_LOGO_URL'",
           "bedrockRoleARN": "'$BEDROCK_ASSUME_ROLE_ARN'",
           "customerFavicon": "'$CUSTOMER_FAVICON_URL'",
-          "openAIAPIKey": "'$OPENAI_API_KEY'"
+          "openAIAPIKey": "'$OPENAI_API_KEY'",
+          "customerIndustry": "'$CUSTOMER_INDUSTRY'"
         }' > cdk.context.json
       - cat cdk.context.json
   build:
