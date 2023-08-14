@@ -34,7 +34,7 @@ export class KbKendraStack extends cdk.Stack {
     )
     // Initizalize Kendra Index
     const kendraIndex = new kendra.CfnIndex(this, 'KendraIndex', {
-      name: props.customerName + '-KendraIndex',
+      name: props.customerName.replace(/[^\w]/g, '') + '-KendraIndex',
       edition: 'DEVELOPER_EDITION',
       roleArn: kendraRole.roleArn,
     });
