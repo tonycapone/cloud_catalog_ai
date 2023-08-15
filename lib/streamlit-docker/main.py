@@ -470,12 +470,16 @@ with query_tab:
 
     sql_request = st.text_input("Enter a question about the above data:", value="", on_change=submit_sql, key="sql_request_input", placeholder="Enter your query here")
     if st.session_state["sql_query"]:
-        st.subheader("SQL Query")
-        st.write(st.session_state["sql_query"])
-        st.write("")
-        st.subheader("SQL Results")
-        query_result = sqldf(st.session_state["sql_query"], globals())
-        st.write(query_result)    
+        st.subheader("Question")
+        st.write(st.session_state["question"])
+        with st.expander("SQL Query", expanded=False):
+            st.subheader("SQL Query")
+            st.write(st.session_state["sql_query"])
+            st.write("")
+        with st.expander("SQL Results", expanded=False):
+            st.subheader("SQL Results")
+            query_result = sqldf(st.session_state["sql_query"], globals())
+            st.write(query_result)    
         st.subheader("Answer")
         answer = explanation_chain(inputs={"question":st.session_state["question"], "query_result":query_result.to_dict(orient="records")})
         st.write(answer["text"])
