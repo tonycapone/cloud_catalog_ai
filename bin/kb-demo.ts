@@ -71,8 +71,8 @@ console.log(`*** 🚀 Starting deployment for ${config.customerName} ***`)
 console.log(`*** 🚀 Scraping ${config.scrapeUrls} ***`)
 
 // remove any special characters from the stack name
-let stackPrefix = `KB-${config.customerName}`
-stackPrefix = stackPrefix.replace(/[^\w]/g, '');
+let stackPrefix = config.customerName
+stackPrefix = "KB-" + stackPrefix.replace(/[^\w]/g, '');
 
 const kendaStack = new KbKendraStack(app, `${stackPrefix}-KendraStack`, {
   scrapeUrls: (config.scrapeUrls + "").split(","),
