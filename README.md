@@ -25,17 +25,20 @@ Then run `cdk deploy --all` to deploy the project to your environment.
     "customerName": "ACME Corp",
     "customerFavicon": "optional favicon link",
     "bedrockRoleArn": "arn:aws:iam::123456789012:role/bedrock-role",
-    "customerLogo": "optional logo link for chat avatar"
+    "customerLogo": "http://acmecorp.com/logo.jpg",
+    "customerIndustry": "Trucking"
 
 }
 ```
-The `scrapeUrls` array contains the URLs that will be scraped and indexed into Kendra.
+The `scrapeUrls` array contains the URLs that will be scraped and indexed into Kendra. Typically this is the customer's website. 
 
-`customerName` Optional. This is the name of the customer that will be displayed in the header of the Streamlit Chat UI.
+`customerName` This is the name of the customer that will be displayed in the header of the Streamlit Chat UI.
 
-`customerFavicon` Optional. The favicon that will be displayed in the header of the Streamlit Chat UI.
+`customerFavicon` The favicon that will be displayed in the header of the Streamlit Chat UI.
 
-`customerLogo` Optional. The logo that will be displayed next to generated responses.
+`customerLogo` The logo that will be displayed next to generated responses.
+
+`customerIndustry` The industry that the customer is in. Used for synthetic data generation
 
 You must also specify one of:
 `bedrockRoleArn` The ARN of a role that has access to the Bedrock API.
