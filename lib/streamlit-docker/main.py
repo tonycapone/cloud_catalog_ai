@@ -143,8 +143,12 @@ You might find these links helpful:
 
 """.format(result["answer"].strip())
                 for source in result['source_documents']:
-                    if source.metadata['title'] not in response_text:
-                        response_text += f"[\"{source.metadata['title']}\"]({source.metadata['source']})\n"
+                    if source.metadata['title'] != "":
+                        if source.metadata['title'] not in response_text:
+                            response_text += f"[\"{source.metadata['title']}\"]({source.metadata['source']})\n"
+                    else:
+                        if source.metadata['source'] not in response_text:
+                            response_text += f"[\"{source.metadata['source']}\"]({source.metadata['source']})\n"
                 
                 logger.info(response_text)
                 st.session_state["chat_history"].append((user_input, result["answer"]))
