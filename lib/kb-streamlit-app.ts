@@ -48,7 +48,9 @@ class KbStreamlitAppStack extends cdk.Stack {
 
         // Add necessary permissions to the role
         taskRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonS3FullAccess'));
-        const image = ecs.ContainerImage.fromAsset('lib/streamlit-docker')
+        const image = ecs.ContainerImage.fromAsset('lib/streamlit-docker', {
+            platform: cdk.aws_ecr_assets.Platform.LINUX_AMD64
+        })
         const fargateService = new ecs_patterns.ApplicationLoadBalancedFargateService(this, "StreamlitFargateService", {
             cluster: cluster,
             cpu: 256,
@@ -67,6 +69,7 @@ class KbStreamlitAppStack extends cdk.Stack {
                 },
                 containerPort: 8501
             },
+            
             memoryLimitMiB: 512,
             publicLoadBalancer: true
         })
