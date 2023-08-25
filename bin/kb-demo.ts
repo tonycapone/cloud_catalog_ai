@@ -41,7 +41,7 @@ const extractConfig = () => {
   const bedrockRoleARN = app.node.tryGetContext('bedrockRoleARN')
   if (bedrockRoleARN === undefined) {
     if (openAIAPIKey === undefined) {
-      console.error('*** You must provide either a bedrockRoleArn or an openAIAPIKey')
+      console.error('*** You must provide either a bedrockRoleARN or an openAIAPIKey')
       console.error('*** you can do this by editing cdk.context.json 🚀            ***')
       throw new Error("Missing bedrockRoleArn or openAIAPIKey")
     }
