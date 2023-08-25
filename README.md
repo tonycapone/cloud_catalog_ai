@@ -30,7 +30,7 @@ Then run `cdk deploy --all` to deploy the project to your environment.
     ],
     "customerName": "ACME Corp",
     "customerFavicon": "optional favicon link",
-    "bedrockRoleArn": "arn:aws:iam::123456789012:role/bedrock-role",
+    "bedrockRoleARN": "arn:aws:iam::123456789012:role/bedrock-role",
     "customerLogo": "http://acmecorp.com/logo.jpg",
     "customerIndustry": "Trucking"
 
@@ -47,7 +47,7 @@ The `scrapeUrls` array contains the URLs that will be scraped and indexed into K
 `customerIndustry` The industry that the customer is in. Used for synthetic data generation
 
 You must also specify one of:
-`bedrockRoleArn` The ARN of a role that has access to the Bedrock API.
+`bedrockRoleARN` The ARN of a role that has access to the Bedrock API.
 
 or
 `openaiApiKey` An API key for the OpenAI API.
