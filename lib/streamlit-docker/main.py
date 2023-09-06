@@ -67,7 +67,10 @@ try:
 except:
     llm = OpenAI(temperature=0.3, openai_api_key=os.environ["OPENAI_API_KEY"])
     logger.info("Bedrock client not available. Using OpenAI")
-st.set_page_config(page_title=customer_name+ " GenAI Demo", page_icon=favicon_url if favicon_url else ":robot:")
+st.set_page_config(
+    page_title=customer_name+ " GenAI Demo", 
+    page_icon=favicon_url if favicon_url else ":robot:",
+    initial_sidebar_state='collapsed')
 if chatbot_logo:
     st.image(chatbot_logo, width=100)
 
@@ -75,13 +78,36 @@ if chatbot_logo:
 assistant_tab, product_tab, query_tab = st.tabs(["Assistant", "Product Ideator", "Data Query"])
 
 with assistant_tab:
+    st.caption("A conversational chat assistant showing off the capabilities of Amazon Bedrock and Retrieval-Augmented-Generation (RAG)")
+    if "generated" not in st.session_state:
+        st.session_state["generated"] = []
+
+    if "past" not in st.session_state:
+        st.session_state["past"] = []
+
+    if "chat_history" not in st.session_state:
+        st.session_state["chat_history"] = []
+    if "prompt_modifier" not in st.session_state:
+        st.session_state["prompt_modifier"] = "Informative, empathetic, and friendly"
+    def handle_prompt_modifier_input():
+        st.session_state["prompt_modifier"] = st.session_state["prompt_modifier_input"]
+
+    with st.sidebar:
+        st.header("Chatbot Prompt Engineering")
+        st.text_area("Prompt Modifier", value=st.session_state['prompt_modifier'], key="prompt_modifier_input", on_change=handle_prompt_modifier_input)
+        st.caption("The Prompt Modifier describes the tone of the assistant, i.e. 'Informative, empathetic, and friendly'")
+
+
     # Prompt template for internal data bot interface
     template = """You are a helpful and talkative """ + customer_name + """ assistant that answers questions directly and only using the information provided in the context below. 
-    Do not include any framing language such as "According to the context" in your responses. You should pretend as if you already know the answer to the question. 
+    Do not include any framing language such as "According to the context" in your responses, but rather act is if the information is coming from your memory banks. 
 
     Simply answer the question clearly and with lots of detail using only the relevant details from the information below. If the context does not contain the answer, say "I don't know."
     I repeat DO NOT TALK ABOUT THE CONTEXT
-    Now read this context and answer the question at the bottom. Make it fun and use emojis where appropriate.
+
+    Finally, you should use the following guidance to control the tone: """ + st.session_state["prompt_modifier"] + """
+    Now read this context and answer the question at the bottom. 
+
     Context: {context}"
 
     Question: "Hey """ + customer_name + """ Chatbot! {question}
@@ -116,14 +142,7 @@ with assistant_tab:
     # From here down is all the StreamLit UI.
     # if favicon_url is defined, use it
 
-    if "generated" not in st.session_state:
-        st.session_state["generated"] = []
 
-    if "past" not in st.session_state:
-        st.session_state["past"] = []
-
-    if "chat_history" not in st.session_state:
-        st.session_state["chat_history"] = []
 
     def submit():
         user_input = st.session_state['input']
@@ -179,11 +198,11 @@ You might find these links helpful:
     st.write("")
     st.write("")
     with st.expander("Debug", expanded=False):
+        
         st.write(st.session_state)
 
 with product_tab:
-    st.subheader("Product Ideator")
-    st.write("Use this tool to generate product ideas. You can use the generated ideas to create a new product or to improve an existing one.")
+    st.caption("Use this tool to generate product ideas. You can use the generated ideas to create a new product or to improve an existing one.")
     st.write("")
 
     def submit_product():
@@ -283,7 +302,8 @@ with query_tab:
 
     products_schema_template = """"
     Generate a basic database schema for exactly 1 table called "{schema_type}_table" with exactly 5 columns for a database table containing a list of {schema_type} from """ + customer_name +  """, who is in the """ + customer_industry + """ industry.
-    Only generate the schema, no explanatory language please.  """
+    Only generate the schema, no explanatory language please.  
+    CREATE TABLE"""
 
     json_template = """{schema}
     Generate a JSON array of exactly 10 items from the above table. The items should resemble something that would belong to """ + customer_name +  """, who is in the """ + customer_industry + """ industry, 
@@ -338,7 +358,6 @@ with query_tab:
         template=explanation_template, input_variables=["question", "query_result"]
     )
 
-
     schema_chain = LLMChain(
         llm=llm,
         verbose=True,
@@ -372,9 +391,8 @@ with query_tab:
         verbose=True,
         prompt=explanation_prompt,
         llm_kwargs={"stop_sequences": ["Generate"]})
+
     
-
-
     @st.cache_data
     def load_product_schema():
         print("loading schema")
@@ -419,16 +437,6 @@ with query_tab:
         junction_table = json.loads("[" + junction_table + "]")
         return junction_table
 
-#     schema = """
-# id INT PRIMARY KEY
-# name VARCHAR(50)
-# description TEXT
-# price DECIMAL(10,2)
-# category VARCHAR(20)
-# created_at DATETIME
-# available BOOLEAN
-#     """
-    
     if "products_table" not in st.session_state:
         st.session_state["products_table"] = load_product_list()
     if "customers_schema" not in st.session_state:
@@ -445,6 +453,9 @@ with query_tab:
     products_table = pd.DataFrame(st.session_state["products_table"])
     customers_table = pd.DataFrame(st.session_state["customers_table"])
     junction_table = pd.DataFrame(st.session_state["junction_table"])
+
+    st.code(st.session_state["customers_schema"])
+    st.code(st.session_state["product_schema"])
 
     with st.expander("Data", expanded=False):
         st.table(products_table)
@@ -486,7 +497,7 @@ with query_tab:
             st.write(query_result)    
         st.subheader("Answer")
         answer = explanation_chain(inputs={"question":st.session_state["question"], "query_result":query_result.to_dict(orient="records")})
-        st.write(answer["text"])
+        st.text(answer["text"])
     with st.expander("Debug", expanded=False):
         st.subheader("Schema")
         st.write(st.session_state["product_schema"])
