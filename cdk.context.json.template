@@ -7,5 +7,5 @@
     "bedrockRoleARN": "arn:aws:iam::123456789012:role/bedrock-role",
     "customerFavicon": "optional favicon link",
     "customerLogo": "optional logo link for chat avatar"
-
+    "customerIndustry": "CPG"
 }
