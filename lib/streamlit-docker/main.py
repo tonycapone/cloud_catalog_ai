@@ -13,7 +13,6 @@ from langchain.chains import LLMChain
 from streamlit.logger import get_logger
 import pandas as pd
 from pandasql import sqldf
-import re
 from botocore.config import Config
 
 logger = get_logger(__name__)
@@ -60,7 +59,7 @@ try:
     print(BEDROCK_CLIENT.list_foundation_models())
     llm = Bedrock(
         client=BEDROCK_CLIENT, 
-        model_id="anthropic.claude-v1", 
+        model_id="anthropic.claude-v2", 
         model_kwargs={"temperature":.3, "max_tokens_to_sample": 1200 },
         verbose=True
     )
@@ -81,10 +80,8 @@ with assistant_tab:
     st.caption("A conversational chat assistant showing off the capabilities of Amazon Bedrock and Retrieval-Augmented-Generation (RAG)")
     if "generated" not in st.session_state:
         st.session_state["generated"] = []
-
     if "past" not in st.session_state:
         st.session_state["past"] = []
-
     if "chat_history" not in st.session_state:
         st.session_state["chat_history"] = []
     if "prompt_modifier" not in st.session_state:
@@ -99,26 +96,32 @@ with assistant_tab:
 
 
     # Prompt template for internal data bot interface
-    template = """You are a helpful and talkative """ + customer_name + """ assistant that answers questions directly and only using the information provided in the context below. 
-    Do not include any framing language such as "According to the context" in your responses, but rather act is if the information is coming from your memory banks. 
+    template = """
+Human: You are a helpful and talkative """ + customer_name + """ assistant that answers questions directly and only using the information provided in the context below. 
+Guidance for answers:
+    - Do not include any framing language such as "According to the context" in your responses, but rather act is if the information is coming from your memory banks. 
+    - Simply answer the question clearly and with lots of detail using only the relevant details from the information below. If the context does not contain the answer, say "I don't know."
+    - Use the royal "We" in your responses. 
+    - Finally, you should use the following guidance to control the tone: """ + st.session_state["prompt_modifier"] + """
 
-    Simply answer the question clearly and with lots of detail using only the relevant details from the information below. If the context does not contain the answer, say "I don't know."
-    I repeat DO NOT TALK ABOUT THE CONTEXT
+Now read this context and answer the question at the bottom. 
 
-    Finally, you should use the following guidance to control the tone: """ + st.session_state["prompt_modifier"] + """
-    Now read this context and answer the question at the bottom. 
+Context: {context}"
 
-    Context: {context}"
+Question: "Hey """ + customer_name + """ Chatbot! {question}
 
-    Question: "Hey """ + customer_name + """ Chatbot! {question}
-    Answer: """
+Assistant:
+According to the context provided,
+"""
 
-    condensed_question_template = """Given the following conversation and a follow up question, rephrase the follow up question to be a standalone question.
+    condensed_question_template = """Human: Given the following conversation and a follow up question, rephrase the follow up question to be a standalone question.
 
-    Chat History:
-    {chat_history}
-    Follow Up Input: {question}
-    Standalone question:"""
+Chat History:
+{chat_history}
+Follow Up Input: {question}
+
+Assistant:
+Standalone question:"""
     CONDENSE_QUESTION_PROMPT = PromptTemplate.from_template(condensed_question_template)
 
     PROMPT = PromptTemplate(
@@ -141,8 +144,6 @@ with assistant_tab:
 
     # From here down is all the StreamLit UI.
     # if favicon_url is defined, use it
-
-
 
     def submit():
         user_input = st.session_state['input']
@@ -235,12 +236,15 @@ with product_tab:
             fh.write(base64.decodebytes(image_bytes.encode()))
             fh.close()
 
-    product_template = """Generate an brand new innovative, fun, and creative """ + customer_name + """ product idea description 
-    based on the below product idea.  Be sure to format it in Markdown. Do not include any framing language, just the product description.
+    product_template = """Human: Generate an brand new innovative, fun, and creative """ + customer_name + """ product idea description 
+based on the below product idea.  Be sure to format it in Markdown. Do not include any framing language, just the product description.
 
-    Product Idea: {idea}
-    
-    New Product Description: """
+Product Idea: {idea}
+
+Assistant:
+Here is a creative product description in markdown format
+
+"""
 
     PRODUCT_PROMPT = PromptTemplate(
         template=product_template, input_variables=["idea"]
@@ -253,11 +257,12 @@ with product_tab:
         prompt=PRODUCT_PROMPT,
     )
 
-    press_release_template = """
-    Generate a 4 paragraph press release for a new product from """ + customer_name + """ based on the below product description and format it in Markdown
-    {product_description}
+    press_release_template = """Human:
+Generate a 4 paragraph press release for a new product from """ + customer_name + """ based on the below product description and format it in Markdown
+{product_description}
 
-    Press Release: """
+Assistant:
+Press Release: """
 
 
     PRESS_RELEASE_PROMPT = PromptTemplate(
@@ -294,48 +299,57 @@ with product_tab:
 with query_tab:
     if "sql_query" not in st.session_state:
         st.session_state["sql_query"] = ""
-    junction_schema_template = """
-    Generate a database schema for a junction table called "junction_table" containg the ids for the below tables. Assume the ids for both tables are integers 0-9
-    {table1}
-    {table2}
-    """
+    junction_schema_template = """Human: 
+Generate a database schema for a junction table called "junction_table" containg the ids for the below tables. Assume the ids for both tables are integers 0-9
+{table1}
+{table2}
 
-    products_schema_template = """"
-    Generate a basic database schema for exactly 1 table called "{schema_type}_table" with exactly 5 columns for a database table containing a list of {schema_type} from """ + customer_name +  """, who is in the """ + customer_industry + """ industry.
-    Only generate the schema, no explanatory language please.  
-    CREATE TABLE"""
+Assistant:
+"""
 
-    json_template = """{schema}
-    Generate a JSON array of exactly 10 items from the above table. The items should resemble something that would belong to """ + customer_name +  """, who is in the """ + customer_industry + """ industry, 
-    Print it in JSON format The ids should number 0-9. No explanatory language please.
-    [""" 
+    products_schema_template = """Human: Generate a basic database schema for exactly 1 table called "{schema_type}_table" with exactly 5 columns for a database table containing a list of {schema_type} from """ + customer_name +  """, who is in the """ + customer_industry + """ industry.
+    Only generate the schema, no explanatory language please.
 
-    junction_item_template = """{schema}
-    Generate a JSON array of from a junction table with exactly 20 items from """ + customer_name +  """, who is in the """ + customer_industry + """ industry,
-    in the above table, in JSON format. The ids will be numbered 0-9, Be sure to use a combination of ids from both tables. No explanatory language, just the JSON.
-    ["""
+    Assistant:"""
+
+    json_template = """Human:
+Generate a JSON array of exactly 10 items that match the below schema. The items should resemble something that would belong to """ + customer_name +  """, who is in the """ + customer_industry + """ industry, 
+Print it in JSON format The ids should number 0-9. No explanatory language please.
+{schema}
+
+Assistant:
+[
+""" 
+
+    junction_item_template = """Human: {schema}
+Generate a JSON array of from a junction table with exactly 20 items from """ + customer_name +  """, who is in the """ + customer_industry + """ industry,
+in the above table, in JSON format. The ids will be numbered 0-9, Be sure to use a combination of ids from both tables. No explanatory language, just the JSON.
+
+Assistant:
+[
+"""
 
 
-    sql_template = """
-    Generate a SQLite compatible SELECT statement that queries the below tables and achieves the following result. Be sure to alias any columns that are identifical. 
+    sql_template = """Human:
+    Generate a SQLite compatible SELECT statement that queries the below tables and achieves the following result. 
     
     tables: 
     {table1}
     {table2}
     {table3}
-
     
     request {sql_request}
     No explanatory language please, just the SELECT query. DO NOT include any additional SQL statements, just the SELECT statement.
 
-    sql query:
+    Assistant:
+
     """
 
-    explanation_template = """
-    Answer the below question directly with the results from the SQL query below in plain English. Do not include any SQL tables or queries in your answer. Just plain english. 
+    explanation_template = """Human: Answer the below question directly with the results from the SQL query below in plain English. Do not include any SQL tables or queries in your answer. Just plain english. 
     Question: {question}
     Query Result: {query_result}
-    Answer: """
+
+    Assistant:"""
 
     schema_prompt = PromptTemplate(
         template=products_schema_template, input_variables=["schema_type"]
