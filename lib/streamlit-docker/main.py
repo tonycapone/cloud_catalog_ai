@@ -22,7 +22,6 @@ aws_region = os.environ["AWS_REGION"]
 customer_name = os.environ["CUSTOMER_NAME"]
 favicon_url = os.environ["FAVICON_URL"] if "FAVICON_URL" in os.environ else None
 chatbot_logo = os.environ["LOGO_URL"] if "LOGO_URL" in os.environ else None
-bedrock_role = os.environ["BEDROCK_ASSUME_ROLE_ARN"] if "BEDROCK_ASSUME_ROLE_ARN" in os.environ else None
 customer_industry = os.environ["CUSTOMER_INDUSTRY"] if "CUSTOMER_INDUSTRY" in os.environ else None
 
 logger.info("Kendra index id: " + kendra_index_id)
@@ -38,18 +37,6 @@ retriever = KendraIndexRetriever(
 
 # Try Bedrock first then fall back to OpenAI
 try: 
-    bedrock_creds = boto3.client("sts").assume_role(
-    RoleArn=bedrock_role,
-    RoleSessionName="bedrock")['Credentials']
-
-    logger.info("Obtained Bedrock Temporary Credentials")
-    from langchain.llms.bedrock import Bedrock
-    config = Config(
-        retries = {
-      'max_attempts': 10,
-      'mode': 'adaptive'
-   }
-)
     BEDROCK_CLIENT = boto3.client("bedrock", 'us-east-1', 
                                 aws_access_key_id=bedrock_creds["AccessKeyId"], 
                                 aws_secret_access_key=bedrock_creds["SecretAccessKey"], 
