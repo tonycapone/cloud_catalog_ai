@@ -15,6 +15,7 @@ import pandas as pd
 from pandasql import sqldf
 from botocore.config import Config
 
+
 logger = get_logger(__name__)
 
 kendra_index_id = os.environ["KENDRA_INDEX_ID"]
@@ -35,24 +36,24 @@ retriever = KendraIndexRetriever(
     return_source_documents=False
 )
 
+from langchain.llms.bedrock import Bedrock
+config = Config(
+    retries = {
+    'max_attempts': 10,
+    'mode': 'adaptive'
+}
+)
 # Try Bedrock first then fall back to OpenAI
-try: 
-    BEDROCK_CLIENT = boto3.client("bedrock", 'us-east-1', 
-                                aws_access_key_id=bedrock_creds["AccessKeyId"], 
-                                aws_secret_access_key=bedrock_creds["SecretAccessKey"], 
-                                aws_session_token=bedrock_creds["SessionToken"],
-                                config=config
-                                )
-    print(BEDROCK_CLIENT.list_foundation_models())
-    llm = Bedrock(
-        client=BEDROCK_CLIENT, 
-        model_id="anthropic.claude-v2", 
-        model_kwargs={"temperature":.3, "max_tokens_to_sample": 1200 },
-        verbose=True
-    )
-except:
-    llm = OpenAI(temperature=0.3, openai_api_key=os.environ["OPENAI_API_KEY"])
-    logger.info("Bedrock client not available. Using OpenAI")
+BEDROCK_CLIENT = boto3.client("bedrock", 'us-east-1', config=config)
+print(BEDROCK_CLIENT.list_foundation_models())
+llm = Bedrock(
+    client=BEDROCK_CLIENT, 
+    model_id="anthropic.claude-v2", 
+    model_kwargs={"temperature":.3, "max_tokens_to_sample": 1200 },
+    verbose=True
+)
+
+
 st.set_page_config(
     page_title=customer_name+ " GenAI Demo", 
     page_icon=favicon_url if favicon_url else ":robot:",
