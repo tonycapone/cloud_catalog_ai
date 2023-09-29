@@ -7,7 +7,7 @@ See the [this quip](https://quip-amazon.com/pI57Abo7dElG/Enterprise-Knowledge-Ba
 __Note: You must have access to a Bedrock enabled account to use this demo. You can also use the OpenAI API instead of Bedrock, but it's not advisable to demo in this way to customers.__
 
 ## Requirements
-- A Bedrock enabled Isengard account (this project assumes you're using a cross-account role to access Bedrock from one of the shared accounts)
+- A Bedrock enabled Isengard account
 
 - A CDK boostrapped account (see instructions below)
 
@@ -30,7 +30,6 @@ Then run `cdk deploy --all` to deploy the project to your environment.
     ],
     "customerName": "ACME Corp",
     "customerFavicon": "optional favicon link",
-    "bedrockRoleARN": "arn:aws:iam::123456789012:role/bedrock-role",
     "customerLogo": "http://acmecorp.com/logo.jpg",
     "customerIndustry": "Trucking"
 
@@ -45,14 +44,6 @@ The `scrapeUrls` array contains the URLs that will be scraped and indexed into K
 `customerLogo` The logo that will be displayed next to generated responses.
 
 `customerIndustry` The industry that the customer is in. Used for synthetic data generation
-
-You must also specify one of:
-`bedrockRoleARN` The ARN of a role that has access to the Bedrock API.
-
-or
-`openaiApiKey` An API key for the OpenAI API.
-
-__Note: Bedrock is required to use the Product Ideator tab, which makes a call to Stable Diffusion for image generation__
 
 ## Stack Description
 ### KendraStack
@@ -69,7 +60,6 @@ CUSTOMER_NAME
 LOGO_URL
 FAVICON_URL
 AWS_REGION
-OPENAI_API_KEY or BEDROCK_ASSUME_ROLE_ARN
 ```
 Then run `streamlit run main.py` to start the app.
 

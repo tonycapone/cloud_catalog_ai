@@ -38,14 +38,6 @@ const extractConfig = () => {
     console.info('*** customerLogo is missing   ***')
     console.info('*** you can do this by editing cdk.context.json 🚀            ***')
   }
-  const bedrockRoleARN = app.node.tryGetContext('bedrockRoleARN')
-  if (bedrockRoleARN === undefined) {
-    if (openAIAPIKey === undefined) {
-      console.error('*** You must provide either a bedrockRoleARN or an openAIAPIKey')
-      console.error('*** you can do this by editing cdk.context.json 🚀            ***')
-      throw new Error("Missing bedrockRoleArn or openAIAPIKey")
-    }
-  }
   const customerIndustry = app.node.tryGetContext('customerIndustry')
   if (customerIndustry === undefined) {
     console.warn('*** ⛔️ WARNING: You must provide a valid customerIndustry   ***')
@@ -60,7 +52,6 @@ const extractConfig = () => {
     openAIAPIKey,
     customerFavicon,
     customerLogo,
-    bedrockRoleARN,
     customerIndustry
   }
 }
@@ -85,7 +76,6 @@ new KbStreamlitAppStack (app, `${stackPrefix}-AppStack`, {
   customerName: config.customerName,
   customerFavicon: config.customerFavicon,
   customerLogo: config.customerLogo,
-  bedrockRoleARN: config.bedrockRoleARN,
   customerIndustry: config.customerIndustry
 })
 
