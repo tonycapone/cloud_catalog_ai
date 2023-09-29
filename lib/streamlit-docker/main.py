@@ -44,8 +44,7 @@ config = Config(
 }
 )
 # Try Bedrock first then fall back to OpenAI
-BEDROCK_CLIENT = boto3.client("bedrock", 'us-east-1', config=config)
-print(BEDROCK_CLIENT.list_foundation_models())
+BEDROCK_CLIENT = boto3.client("bedrock-runtime", 'us-east-1', config=config)
 llm = Bedrock(
     client=BEDROCK_CLIENT, 
     model_id="anthropic.claude-v2", 
