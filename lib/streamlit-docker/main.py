@@ -13,7 +13,8 @@ from streamlit.logger import get_logger
 import pandas as pd
 from pandasql import sqldf
 from botocore.config import Config
-
+from io import StringIO
+from pypdf import PdfReader
 
 logger = get_logger(__name__)
 
@@ -56,7 +57,7 @@ if chatbot_logo:
     st.image(chatbot_logo, width=100)
 
     st.subheader(customer_name + " GenAI Demo",)
-assistant_tab, product_tab, query_tab = st.tabs(["Assistant", "Product Ideator", "Data Query"])
+assistant_tab, product_tab, query_tab, file_upload_tab = st.tabs(["Assistant", "Product Ideator", "Data Query", "Document Chat"])
 
 ### Knowledge Base Chatbot Tab ###
 
@@ -193,8 +194,8 @@ with product_tab:
     st.write("")
 
     def submit_product():
-        st.session_state['product_idea_input'] = st.session_state['product_input']
-        st.session_state['product_input'] = ""
+        st.session_state['product_idea_input'] = st.session_state['product_text_input']
+        st.session_state['product_text_input'] = ""
         product_description = product_chain(st.session_state["product_idea_input"])["text"]
 
         st.session_state["product_description"] = product_description
@@ -265,9 +266,9 @@ Press Release: """
     if "press_release" not in st.session_state:
         st.session_state["press_release"] = ""
 
-    st.text_input("What is your product idea?", key="product_input", value="", on_change=submit_product, placeholder="Enter your product here")
+    st.text_input("What is your product idea?", key="product_text_input", value="", on_change=submit_product, placeholder="Enter your product here")
 
-    if st.session_state["product_idea_input"]:
+    if st.session_state["product_text_input"]:
         prod_desc_tab, press_release_tab = st.tabs(["Product Description", "Press Release"])
         with prod_desc_tab:
             st.write("")
@@ -515,4 +516,86 @@ Assistant:
         st.subheader("Session State")
         st.write(st.session_state)
 
+### File Upload Tab ###
+with file_upload_tab:
+    
+    if "upload" not in st.session_state:
+        st.session_state["upload"] = {}
+    upload_session_state = st.session_state["upload"]
+    if "generated" not in upload_session_state:
+        upload_session_state["generated"] = []
+    if "past" not in upload_session_state:
+        upload_session_state["past"] = []
+    if "chat_history" not in upload_session_state:
+        upload_session_state["chat_history"] = []
+    if "document_text" not in upload_session_state:
+        upload_session_state["document_text"] = ""
 
+    doc_chat_template = PromptTemplate(
+        input_variables=["context", "question"],
+        template="""
+Human: below is the contents of a document. I have a question to ask about it.
+---
+Document: {context}
+
+{question}
+Assistant:
+"""
+
+    )
+
+    doc_chat_chain = LLMChain(
+        llm=llm,
+        verbose=True,
+        prompt=doc_chat_template,
+        llm_kwargs={"stop_sequences": ["Question:"]},
+    )
+
+
+    st.header("File Upload")
+    st.write("Upload a file and chat with it")
+    uploaded_files = st.file_uploader("Choose a file", accept_multiple_files=True)
+    if uploaded_files is not None:
+        #if file is a pdf then extract the text
+        for uploaded_file in uploaded_files:
+            upload_session_state['document_text'] += "\n\n ------- \n\n" + uploaded_file.name + "\n\n ------- \n\n"
+            if uploaded_file.name.endswith(".pdf"):
+                pdf_reader = PdfReader(uploaded_file)
+                number_of_pages = len(pdf_reader.pages)
+                # page = pdf_reader.pages[0]
+                for page in pdf_reader.pages:
+                    page_num = page.page_number + 1
+                    upload_session_state['document_text'] += "\n-----\nPage " + f'{page_num}' + ":\n\n" + page.extract_text() + "-----\n"
+                # base64_pdf = base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
+                # pdf_display = f'<embed src="data:application/pdf;base64,{base64_pdf}" width="700" height="1000" type="application/pdf">' 
+                # st.markdown(pdf_display, unsafe_allow_html=True)
+        
+                
+
+            else:
+                # To convert to a string based IO:
+                stringio = StringIO(uploaded_file.getvalue().decode("utf-8"))
+                st.write(stringio)
+
+                # To read file as string:
+                string_data = stringio.read()
+                st.write(string_data)
+        # st.markdown(upload_session_state['document_text'])
+
+    def upload_chat_submit():
+        user_input = st.session_state['upload_chat_input']
+        st.session_state['upload_chat_input'] = ""
+
+        if user_input:
+            upload_session_state['past'].append(user_input)
+            # output = chain.run(input=user_input)
+            result = doc_chat_chain({"question":user_input, "context": upload_session_state['document_text']})
+            upload_session_state['generated'].append(result["text"])
+
+    if upload_session_state["generated"]:
+            for i in range(len(upload_session_state["generated"]) - 1, -1, -1):
+                index = len(upload_session_state["generated"]) - i - 1
+                message(upload_session_state["past"][index], is_user=True, key="upload_chat_" + str(index) + "_user")
+                message(upload_session_state["generated"][index], key="upload_chat_" + str(index), logo=chatbot_logo, avatar_style="no-avatar")
+
+    st.text_input(label="You: ", key="upload_chat_input", value="", on_change=upload_chat_submit, placeholder="Ask a question!", )
