@@ -2,7 +2,6 @@
 import streamlit as st
 from streamlit_chat import message
 import os
-from langchain.llms import OpenAI
 import boto3
 import json
 import base64
@@ -14,7 +13,6 @@ from streamlit.logger import get_logger
 import pandas as pd
 from pandasql import sqldf
 from botocore.config import Config
-from io import StringIO
 
 
 logger = get_logger(__name__)
