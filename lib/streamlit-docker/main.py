@@ -2,14 +2,13 @@
 import streamlit as st
 from streamlit_chat import message
 import os
-from langchain.llms import OpenAI
 import boto3
 import json
 import base64
-from aws_langchain.kendra_index_retriever import KendraIndexRetriever
 from langchain.prompts import PromptTemplate
 from langchain.chains import ConversationalRetrievalChain
 from langchain.chains import LLMChain
+from langchain.retrievers import AmazonKendraRetriever
 from streamlit.logger import get_logger
 import pandas as pd
 from pandasql import sqldf
@@ -30,18 +29,14 @@ logger.info("AWS region: " + aws_region)
 
 code_whisperer = boto3
 # Kendra retriever
-retriever = KendraIndexRetriever(
-    kendraindex=kendra_index_id,
-    awsregion=aws_region,
-    return_source_documents=False
-)
+retriever = AmazonKendraRetriever(index_id=kendra_index_id)
 
 from langchain.llms.bedrock import Bedrock
 config = Config(
     retries = {
     'max_attempts': 10,
     'mode': 'adaptive'
-}
+    }
 )
 # Try Bedrock first then fall back to OpenAI
 BEDROCK_CLIENT = boto3.client("bedrock-runtime", 'us-east-1', config=config)
@@ -62,6 +57,8 @@ if chatbot_logo:
 
     st.subheader(customer_name + " GenAI Demo",)
 assistant_tab, product_tab, query_tab = st.tabs(["Assistant", "Product Ideator", "Data Query"])
+
+### Knowledge Base Chatbot Tab ###
 
 with assistant_tab:
     st.caption("A conversational chat assistant showing off the capabilities of Amazon Bedrock and Retrieval-Augmented-Generation (RAG)")
@@ -189,6 +186,8 @@ You might find these links helpful:
         
         st.write(st.session_state)
 
+### Product Ideator Tab ###
+
 with product_tab:
     st.caption("Use this tool to generate product ideas. You can use the generated ideas to create a new product or to improve an existing one.")
     st.write("")
@@ -282,6 +281,7 @@ Press Release: """
             st.session_state["press_release"] = press_release["text"]
             st.write (st.session_state["press_release"])
 
+### Database Query Tab ###
 
 with query_tab:
     if "sql_query" not in st.session_state:
