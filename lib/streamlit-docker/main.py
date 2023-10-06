@@ -15,6 +15,7 @@ from pandasql import sqldf
 from botocore.config import Config
 from io import StringIO
 from pypdf import PdfReader
+import textract
 
 logger = get_logger(__name__)
 
@@ -550,10 +551,7 @@ Assistant:
         prompt=doc_chat_template,
         llm_kwargs={"stop_sequences": ["Question:"]},
     )
-
-
-    st.header("File Upload")
-    st.write("Upload a file and chat with it")
+    st.caption("Upload a text or pdf file(s) and chat with them")
     uploaded_files = st.file_uploader("Choose a file", accept_multiple_files=True)
     if uploaded_files is not None:
         #if file is a pdf then extract the text
@@ -566,29 +564,20 @@ Assistant:
                 for page in pdf_reader.pages:
                     page_num = page.page_number + 1
                     upload_session_state['document_text'] += "\n-----\nPage " + f'{page_num}' + ":\n\n" + page.extract_text() + "-----\n"
-                # base64_pdf = base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
-                # pdf_display = f'<embed src="data:application/pdf;base64,{base64_pdf}" width="700" height="1000" type="application/pdf">' 
-                # st.markdown(pdf_display, unsafe_allow_html=True)
-        
-                
-
             else:
-                # To convert to a string based IO:
-                stringio = StringIO(uploaded_file.getvalue().decode("utf-8"))
-                st.write(stringio)
-
-                # To read file as string:
-                string_data = stringio.read()
-                st.write(string_data)
-        # st.markdown(upload_session_state['document_text'])
-
+                with open(uploaded_file.name, "wb") as fh:
+                    fh.write(uploaded_file.getvalue())
+                    fh.close()
+                bytes = textract.process(uploaded_file.name)
+                #convert bytes to string
+                text = bytes.decode("utf-8")
+                upload_session_state['document_text'] += text
     def upload_chat_submit():
         user_input = st.session_state['upload_chat_input']
         st.session_state['upload_chat_input'] = ""
 
         if user_input:
             upload_session_state['past'].append(user_input)
-            # output = chain.run(input=user_input)
             result = doc_chat_chain({"question":user_input, "context": upload_session_state['document_text']})
             upload_session_state['generated'].append(result["text"])
 
