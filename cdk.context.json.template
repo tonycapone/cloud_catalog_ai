@@ -3,9 +3,7 @@
         "https://www.example.com/"
     ],
     "customerName": "ACME Corp",
-    "openAIAPIKey": "OPENAI_API_KEY",
-    "bedrockRoleARN": "arn:aws:iam::123456789012:role/bedrock-role",
     "customerFavicon": "optional favicon link",
-    "customerLogo": "optional logo link for chat avatar"
+    "customerLogo": "optional logo link for chat avatar",
     "customerIndustry": "CPG"
 }
