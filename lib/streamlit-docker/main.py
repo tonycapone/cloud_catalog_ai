@@ -58,7 +58,7 @@ if chatbot_logo:
     st.image(chatbot_logo, width=100)
 
     st.subheader(customer_name + " GenAI Demo",)
-assistant_tab, product_tab, query_tab, file_upload_tab = st.tabs(["Assistant", "Product Ideator", "Data Query"])
+assistant_tab, product_tab, query_tab = st.tabs(["Assistant", "Product Ideator", "Data Query"])
 
 ### Knowledge Base Chatbot Tab ###
 
