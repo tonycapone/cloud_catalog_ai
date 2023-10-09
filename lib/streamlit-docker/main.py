@@ -205,7 +205,7 @@ with product_tab:
                 body=json.dumps({
                     "text_prompts": [
                         {
-                            "text": st.session_state["product_description"]
+                            "text": st.session_state["product_idea_input"]
                         }
                     ],
                     "cfg_scale": 10,
