@@ -18,7 +18,6 @@ class KendraPipeline:
         print(document)
         self.kendra.batch_put_document(
             IndexId=self.index_id,
-            RoleArn='arn:aws:iam::543999415209:role/KB-JCPenny-KendraStack-KendraRole9C3D9CF0-RCLYOK6NFOEW',
             Documents=[{
                 'Id': item['url'],
                 'Title': item['title'],
