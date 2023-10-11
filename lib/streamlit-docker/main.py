@@ -269,7 +269,7 @@ Press Release: """
 
     st.text_input("What is your product idea?", key="product_text_input", value="", on_change=submit_product, placeholder="Enter your product here")
 
-    if st.session_state["product_text_input"]:
+    if st.session_state["product_idea_input"]:
         prod_desc_tab, press_release_tab = st.tabs(["Product Description", "Press Release"])
         with prod_desc_tab:
             st.write("")
