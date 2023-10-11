@@ -5,6 +5,9 @@ from scrapy.spiders import CrawlSpider, Rule
 from scrapy.exceptions import IgnoreRequest
 from bs4 import BeautifulSoup
 from scraper.items import ScraperItem
+from urllib.parse import urlparse
+
+
 
 file = open("../cdk.context.json").read()
 config = json.loads(file)
@@ -12,8 +15,11 @@ config = json.loads(file)
 
 class DefaultSpider(CrawlSpider):
     name = 'defaultspider'
-    allowed_domains = config["scrapeUrls"]
+    
+    
     start_urls = config["scrapeUrls"]
+    #allowed_domains = config['scrapeUrls']
+    allowed_domains = set(map(lambda x: urlparse(x).netloc, start_urls ))
     
     # Define the rules for scraping and crawling.
     rules = (
