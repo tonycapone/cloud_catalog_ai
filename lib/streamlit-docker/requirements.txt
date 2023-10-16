@@ -8,3 +8,5 @@ selenium
 pyyaml==6.0.1
 pandas
 pandasql
+pypdf
+textract
