@@ -8,7 +8,8 @@ import base64
 from langchain.prompts import PromptTemplate
 from langchain.chains import ConversationalRetrievalChain
 from langchain.chains import LLMChain
-from langchain.retrievers import AmazonKendraRetriever
+
+from aws_langchain.kendra_index_retriever import KendraIndexRetriever
 from streamlit.logger import get_logger
 import pandas as pd
 from pandasql import sqldf
@@ -31,7 +32,11 @@ logger.info("AWS region: " + aws_region)
 
 code_whisperer = boto3
 # Kendra retriever
-retriever = AmazonKendraRetriever(index_id=kendra_index_id)
+retriever = KendraIndexRetriever(
+    kendraindex=kendra_index_id,
+    awsregion=aws_region,
+    return_source_documents=False
+)
 
 from langchain.llms.bedrock import Bedrock
 config = Config(
