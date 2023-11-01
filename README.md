@@ -48,6 +48,9 @@ You must define the following parameters:
     Type: String
     Description: The industry of the customer.
 ```
+Under the hood, the template creates a CodeBuild project to build the CDK project and deploys it to your account.
+
+Once created, you can find the URL of the Streamlit app in the Outputs section of the `KB-{CustomerName}-AppStack` stack.
 
 ### CDK
 
@@ -105,4 +108,15 @@ Then run `streamlit run main.py` to start the app.
 ## Scraping
 The project uses the V1 verson of the Kendra web-scraper to crawl the customer's URLs. This works in most cases, but there are some situations where the scraper is blocked from some reason. In this case, you can use the provided scraper to crawl the customer's website and upload the results to Kendra.
 
-TODO: Add instructions for using the scraper.
+The scraper uses a Python library called [Scrapy](https://scrapy.org/).
+
+To use the scraper, cd to `/scraper` and run 
+
+`pip install -r requirements.txt` 
+
+to install the dependencies. Export the Kendra Index Id from your Kendra stack to the `KENDRA_INDEX_ID` environment variable. 
+
+Then run 
+
+`crapy crawl defaultspider`
+
