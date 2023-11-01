@@ -19,7 +19,7 @@ __Note: You must have access to a Bedrock enabled account to use this demo. You 
 
 
 ## Deployment
-🆕 NEW! CloudFormation support has been added. The demos can now be deployed as easily as running a CFN template. 
+__🆕 NEW! CloudFormation support has been added. The demos can now be deployed as easily as running a CFN template.__
 
 ### CloudFormation
 To deploy the demo, you can use `cfn-template.yml`. Or just click the link below:
