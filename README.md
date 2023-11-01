@@ -1,6 +1,12 @@
-# Retrieval Augmented Generation Demo-In-A-Box
+# Generative AI Tailored Demos
 ## About
-This project is an easily deployable demo-in-a-box that demonstrates how to use the [Retrieval Augmented Generation](https://arxiv.org/abs/2005.11401) model to build a Generative AI chatbot that can answer questions about a customer's website. It uses [Amazon Kendra](https://aws.amazon.com/kendra/) to index the website and [Amazon Bedrock](https://aws.amazon.com/bedrock/) to generate responses to questions. It also uses [Streamlit](https://www.streamlit.io/) to provide a web interface for the chatbot.
+The GenAI Tailored Demo Experience is a tool designed to introduce customers to Generative AI, targeting customers in the "just curious" or FOMO stage of their journey. The demo can be customized to each customer and their industry, and consists of three main components: a Conversational AI Chat Demo, a Product Ideator, and a Data Querying Tool. 
+
+Each part serves a distinct purpose, demonstrating practical applications of GenAI by utilizing real data from the customer's public-facing website. Deployed as an easily manageable CDK project, the demo experience emphasizes the real-world potential of GenAI in a way that resonates with the specific needs and context of the customer.
+
+This tailored approach not only personalizes the experience but also highlights the transformative potential of GenAI, instilling confidence, curiosity, and recognition of the vast opportunities that Generative AI presents.
+
+The chatbot portion demonstrates how to use [Retrieval Augmented Generation](https://arxiv.org/abs/2005.11401) to build a Generative AI chatbot that can answer questions about a customer's website. It uses [Amazon Kendra](https://aws.amazon.com/kendra/) to index the website and [Amazon Bedrock](https://aws.amazon.com/bedrock/) to generate responses to questions. It also uses [Streamlit](https://www.streamlit.io/) to provide a web interface for the chatbot.
 
 See the [this quip](https://quip-amazon.com/pI57Abo7dElG/Enterprise-Knowledge-Base-Chatbot-Demo) for more information. 
 
@@ -13,6 +19,39 @@ __Note: You must have access to a Bedrock enabled account to use this demo. You 
 
 
 ## Deployment
+🆕 NEW! CloudFormation support has been added. The demos can now be deployed as easily as running a CFN template. 
+
+### CloudFormation
+To deploy the demo, you can use `cfn-template.yml`. Or just click the link below:
+
+[Deploy Template](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=GAITD-Template&templateURL=https://anhwell-gaitd-template.s3.amazonaws.com/cfn-template.yml)
+
+
+You must define the following parameters:
+
+
+
+```
+  CustomerName:
+    Type: String
+    Description: The name of the customer.
+  ScrapeUrls:
+    Type: String
+    Description: URLs to be scraped.
+  CustomerLogoUrl:
+    Type: String
+    Description: URL of the customer's logo.
+  CustomerFaviconUrl:
+    Type: String
+    Description: URL of the customer's favicon.
+  CustomerIndustry:
+    Type: String
+    Description: The industry of the customer.
+```
+
+### CDK
+
+
 Run `npm install` to install the dependencies.
 
 Copy `cdk.context.json.template` to `cdk.context.json` and fill in the values.
