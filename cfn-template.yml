@@ -104,11 +104,13 @@ Resources:
       Code:
         ZipFile: |
           const AWS = require('aws-sdk');
+          const response = require('cfn-response');
           const codebuild = new AWS.CodeBuild();
 
           exports.handler = async (event, context) => {
             if (event.RequestType === 'Delete') {
               // Optionally handle stack deletion
+              await response.send(event, context, "SUCCESS");
               return;
             }
 
@@ -117,7 +119,9 @@ Resources:
               projectName,
             };
 
-            await codebuild.startBuild(params).promise();
+            let res = await codebuild.startBuild(params).promise();
+            if (res) await response.send(event, context, response.SUCCESS);
+            return;
           };
       Runtime: nodejs14.x
 
