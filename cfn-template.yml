@@ -103,27 +103,30 @@ Resources:
       Role: !GetAtt 'LambdaExecutionRole.Arn'
       Code:
         ZipFile: |
-          const AWS = require('aws-sdk');
-          const response = require('cfn-response');
-          const codebuild = new AWS.CodeBuild();
+          const { CodeBuild } = require("@aws-sdk/client-codebuild");
+          const response = require("cfn-response");
+          const codebuild = new CodeBuild();
 
           exports.handler = async (event, context) => {
-            if (event.RequestType === 'Delete') {
+            if (event.RequestType === "Delete") {
               // Optionally handle stack deletion
               await response.send(event, context, "SUCCESS");
               return;
             }
 
             const projectName = event.ResourceProperties.ProjectName;
-            const params = {
-              projectName,
-            };
+            const params = { projectName };
 
-            let res = await codebuild.startBuild(params).promise();
-            if (res) await response.send(event, context, response.SUCCESS);
+            let res = await codebuild.startBuild(params);
+            if (res) {
+              await response.send(event, context, response.SUCCESS);
+            } else {
+              await response.send(event, context, response.FAILED);
+            }
             return;
           };
-      Runtime: nodejs14.x
+
+      Runtime: nodejs18.x
 
   LambdaExecutionRole:
     Type: AWS::IAM::Role
