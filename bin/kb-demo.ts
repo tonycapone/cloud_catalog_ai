@@ -3,6 +3,7 @@ import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import { KbKendraStack } from '../lib/kendra-stack/kb-kendra-stack';
 import { KbStreamlitAppStack } from '../lib/kb-streamlit-app'
+import { KBStack } from '../lib/kb-stack/br-kb-stack'; 
 import { open } from 'fs';
 
 const app = new cdk.App();
@@ -65,17 +66,22 @@ console.log(`*** 🚀 Scraping ${config.scrapeUrls} ***`)
 let stackPrefix = config.customerName
 stackPrefix = "KB-" + stackPrefix.replace(/[^\w]/g, '');
 
-const kendaStack = new KbKendraStack(app, `${stackPrefix}-KendraStack`, {
+// const kendaStack = new KbKendraStack(app, `${stackPrefix}-KendraStack`, {
+//   scrapeUrls: (config.scrapeUrls + "").split(","),
+//   customerName: config.customerName.replace(" ", "-")
+// });
+
+const kbStack = new KBStack(app, `${stackPrefix}-KBStack`, {
   scrapeUrls: (config.scrapeUrls + "").split(","),
-  customerName: config.customerName.replace(" ", "-")
 });
 
-new KbStreamlitAppStack (app, `${stackPrefix}-AppStack`, {
-  kendraIndexId: kendaStack.kendraIndexId,
-  openAIAPIKey: config.openAIAPIKey,
-  customerName: config.customerName,
-  customerFavicon: config.customerFavicon,
-  customerLogo: config.customerLogo,
-  customerIndustry: config.customerIndustry
-})
+
+// new KbStreamlitAppStack (app, `${stackPrefix}-AppStack`, {
+//   kendraIndexId: kendaStack.kendraIndexId,
+//   openAIAPIKey: config.openAIAPIKey,
+//   customerName: config.customerName,
+//   customerFavicon: config.customerFavicon,
+//   customerLogo: config.customerLogo,
+//   customerIndustry: config.customerIndustry
+// })
 
