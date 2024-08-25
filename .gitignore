@@ -7,8 +7,8 @@ node_modules
 __pycache__
 *.egg-info
 dist
-
-
+cdk.context.*
+.idea
 # CDK asset staging directory
 .cdk.staging
 cdk.out
