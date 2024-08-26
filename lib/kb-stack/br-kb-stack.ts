@@ -13,6 +13,7 @@ interface KBStackProps extends cdk.StackProps {
 }
 
 export class KBStack extends cdk.Stack {
+    public readonly knowledgeBaseId: string;
     constructor(scope: cdk.App, id: string, props?: KBStackProps) {
         super(scope, id, props);
 
@@ -196,6 +197,7 @@ export class KBStack extends cdk.Stack {
         const datasourceLambda = new lambda.Function(this, 'DataSourceLambda', {
             runtime: lambda.Runtime.PYTHON_3_9,
             handler: 'index.lambda_handler',
+            timeout: cdk.Duration.seconds(300),
             code: lambda.Code.fromAsset(path.join(__dirname, 'create-datasource')),
             role: dataSourceLambdaRole,
             environment: {
@@ -209,7 +211,7 @@ export class KBStack extends cdk.Stack {
             logRetention: logs.RetentionDays.ONE_DAY,
         });
 
-        
+
         // Create Data Source Custom Resource
         const brDataSourceResource = new cdk.CustomResource(this, 'BRDataSourceResource', {
             serviceToken: dataSourceProvider.serviceToken,
@@ -262,5 +264,6 @@ export class KBStack extends cdk.Stack {
         });
 
         brIngestionJobResource.node.addDependency(brDataSourceResource);
+        this.knowledgeBaseId = knowledgeBase.attrKnowledgeBaseId;
     }
 }

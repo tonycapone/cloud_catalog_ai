@@ -8,8 +8,9 @@ import base64
 from langchain.prompts import PromptTemplate
 from langchain.chains import ConversationalRetrievalChain
 from langchain.chains import LLMChain
+from langchain_aws import ChatBedrock
+from langchain_community.retrievers import AmazonKnowledgeBasesRetriever
 
-from aws_langchain.kendra_index_retriever import KendraIndexRetriever
 from streamlit.logger import get_logger
 import pandas as pd
 from pandasql import sqldf
@@ -20,49 +21,45 @@ import textract
 
 logger = get_logger(__name__)
 
-kendra_index_id = os.environ["KENDRA_INDEX_ID"]
 aws_region = os.environ["AWS_REGION"]
 customer_name = os.environ["CUSTOMER_NAME"]
 favicon_url = os.environ["FAVICON_URL"] if "FAVICON_URL" in os.environ else None
 chatbot_logo = os.environ["LOGO_URL"] if "LOGO_URL" in os.environ else None
 customer_industry = os.environ["CUSTOMER_INDUSTRY"] if "CUSTOMER_INDUSTRY" in os.environ else None
 
-logger.info("Kendra index id: " + kendra_index_id)
 logger.info("AWS region: " + aws_region)
 
 code_whisperer = boto3
-# Kendra retriever
-retriever = KendraIndexRetriever(
-    kendraindex=kendra_index_id,
-    awsregion=aws_region,
-    return_source_documents=False
+
+retriever = AmazonKnowledgeBasesRetriever(
+    knowledge_base_id=os.environ["KNOWLEDGE_BASE_ID"],
+    retrieval_config={"vectorSearchConfiguration": {"numberOfResults": 4}},
 )
 
-from langchain.llms.bedrock import Bedrock
 config = Config(
     retries = {
     'max_attempts': 10,
     'mode': 'adaptive'
     }
 )
-# Try Bedrock first then fall back to OpenAI
-BEDROCK_CLIENT = boto3.client("bedrock-runtime", 'us-east-1', config=config)
-llm = Bedrock(
-    client=BEDROCK_CLIENT, 
-    model_id="anthropic.claude-v2", 
-    model_kwargs={"temperature":.3, "max_tokens_to_sample": 1200 },
-    verbose=True
-)
 
+BEDROCK_CLIENT = boto3.client("bedrock-runtime", 'us-east-1', config=config)
+llm = ChatBedrock(
+    client=BEDROCK_CLIENT,
+    model_id="anthropic.claude-3-sonnet-20240229-v1:0",
+    model_kwargs={"temperature": 0},
+    verbose=True,
+)
 
 st.set_page_config(
     page_title=customer_name+ " GenAI Demo", 
     page_icon=favicon_url if favicon_url else ":robot:",
     initial_sidebar_state='collapsed')
+st.subheader(customer_name + " GenAI Demo")
 if chatbot_logo:
     st.image(chatbot_logo, width=100)
 
-    st.subheader(customer_name + " GenAI Demo",)
+    
 assistant_tab, product_tab, query_tab, file_upload_tab = st.tabs(["Assistant", "Product Ideator", "Data Query", "Document Chat"])
 
 ### Knowledge Base Chatbot Tab ###
@@ -154,12 +151,12 @@ You might find these links helpful:
 
 """.format(result["answer"].strip())
                 for source in result['source_documents']:
-                    if source.metadata['title'] != "":
-                        if source.metadata['title'] not in response_text:
-                            response_text += f"[\"{source.metadata['title']}\"]({source.metadata['source']})\n"
-                    else:
-                        if source.metadata['source'] not in response_text:
-                            response_text += f"[\"{source.metadata['source']}\"]({source.metadata['source']})\n"
+                    print("\n\n\n------Source.metadata-------\n\n\n")
+                    print(source.metadata)
+                    if source.metadata['location'] != "":
+                        url = source.metadata['location']['webLocation']['url']
+                        if url not in response_text:
+                            response_text += f"[{url}]({url})\n"
                 
                 logger.info(response_text)
                 st.session_state["chat_history"].append((user_input, result["answer"]))
@@ -206,7 +203,7 @@ with product_tab:
 
         st.session_state["product_description"] = product_description
         image_response = BEDROCK_CLIENT.invoke_model(
-                modelId="stability.stable-diffusion-xl",
+                modelId="stability.stable-diffusion-xl-v1",
                 contentType="application/json",
                 accept="application/json",
                 body=json.dumps({
@@ -289,6 +286,7 @@ Press Release: """
             st.write (st.session_state["press_release"])
 
 ### Database Query Tab ###
+
 
 with query_tab:
     if "sql_query" not in st.session_state:

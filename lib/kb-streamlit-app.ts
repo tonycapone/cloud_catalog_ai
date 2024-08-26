@@ -8,7 +8,7 @@ import * as ecs_patterns from 'aws-cdk-lib/aws-ecs-patterns';
 import * as iam from 'aws-cdk-lib/aws-iam';
 
 interface KbStreamlitAppStackProps extends cdk.StackProps {
-    kendraIndexId: string;
+    knowledgeBaseId: string;
     openAIAPIKey?: string;
     customerName: string;
     customerFavicon: string;
@@ -58,7 +58,7 @@ class KbStreamlitAppStack extends cdk.Stack {
                 taskRole,
                 environment: {
                     "OPENAI_API_KEY": props.openAIAPIKey || "",
-                    "KENDRA_INDEX_ID": props.kendraIndexId,
+                    "KNOWLEDGE_BASE_ID": props.knowledgeBaseId,
                     "CUSTOMER_NAME": props.customerName,
                     "FAVICON_URL": props.customerFavicon,
                     "LOGO_URL": props.customerLogo,

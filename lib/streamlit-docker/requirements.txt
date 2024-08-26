@@ -1,11 +1,13 @@
-langchain==0.0.220
+langchain
+langchain-aws
+langchain_community
 openai
-streamlit==1.24.0
-streamlit-chat==0.1.1
+streamlit
+streamlit-chat
 boto3>=1.28.2
 beautifulsoup4
 selenium
-pyyaml==6.0.1
+pyyaml
 pandas
 pandasql
 pypdf
