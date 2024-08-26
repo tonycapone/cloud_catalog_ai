@@ -57,9 +57,6 @@ const extractConfig = () => {
 
 const config = extractConfig();
 
-console.log(`*** 🚀 Starting deployment for ${config.customerName} ***`)
-console.log(`*** 🚀 Scraping ${config.scrapeUrls} ***`)
-
 // remove any special characters from the stack name
 let stackPrefix = config.customerName
 stackPrefix = "KB-" + stackPrefix.replace(/[^\w]/g, '');

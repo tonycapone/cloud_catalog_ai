@@ -13,3 +13,4 @@ cdk.context.*
 .cdk.staging
 cdk.out
 cdk.context.json
+.vscode

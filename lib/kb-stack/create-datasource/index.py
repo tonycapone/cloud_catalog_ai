@@ -22,6 +22,7 @@ def create_data_source(event, context):
             knowledgeBaseId=knowledge_base_id,
             name='WebCrawlerDataSource',
             description='Web crawler data source for Bedrock Knowledge Base',
+            dataDeletionPolicy='RETAIN',  # Add this line
             dataSourceConfiguration={
                 'type': 'WEB',
                 'webConfiguration': {

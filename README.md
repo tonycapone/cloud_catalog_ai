@@ -19,48 +19,61 @@ __Note: You must have access to a Bedrock enabled account to use this demo. You 
 
 
 ## Deployment
-__🆕 NEW! CloudFormation support has been added. The demos can now be deployed as easily as running a CFN template.__
+__🆕 NEW! We now have a `start.py` script to help you deploy the project more easily.__
 
-### CloudFormation
-To deploy the demo, you can use `cfn-template.yml`. Or just click the link below:
+### Using start.py
 
-[Deploy Template](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=GAITD-Template&templateURL=https://anhwell-gaitd-template.s3.amazonaws.com/cfn-template.yml)
+1. Make sure you have Python 3 installed on your system.
 
+2. The `start.py` script should already be executable. To deploy the project:
 
-You must define the following parameters:
+   On Unix-like systems (Linux, macOS):
+   ```
+   ./start.py deploy
+   ```
+   
+   On Windows:
+   ```
+   python start.py deploy
+   ```
 
+   This will check for CDK CLI installation, ensure your `cdk.context.json` is properly configured, and then deploy the default stack.
 
+3. If you want to deploy a specific stack, you can add the `--stack` flag:
+   ```
+   ./start.py deploy --stack <stack-name>
+   ```
 
-```
-  CustomerName:
-    Type: String
-    Description: The name of the customer.
-  ScrapeUrls:
-    Type: String
-    Description: URLs to be scraped.
-  CustomerLogoUrl:
-    Type: String
-    Description: URL of the customer's logo.
-  CustomerFaviconUrl:
-    Type: String
-    Description: URL of the customer's favicon.
-  CustomerIndustry:
-    Type: String
-    Description: The industry of the customer.
-```
-Under the hood, the template creates a CodeBuild project to build the CDK project and deploys it to your account.
+4. If you want to use a specific AWS profile, you can add the `--profile` flag:
+   ```
+   ./start.py deploy --profile your-profile-name
+   ```
 
-Once created, you can find the URL of the Streamlit app in the Outputs section of the `KB-{CustomerName}-AppStack` stack.
+5. To synthesize the CloudFormation template without deploying, run:
+   ```
+   ./start.py synth
+   ```
 
-### CDK
+6. To destroy the stacks, run:
+   ```
+   ./start.py destroy
+   ```
+   Or to destroy all stacks:
+   ```
+   ./start.py destroy --all
+   ```
 
+The `start.py` script will guide you through setting up the `cdk.context.json` file if it's missing or incomplete.
+
+### Manual CDK Deployment (Alternative Method)
+
+If you prefer to use CDK directly, you can still follow these steps:
 
 Run `npm install` to install the dependencies.
 
 Copy `cdk.context.json.template` to `cdk.context.json` and fill in the values.
 
 Set [up cdk](https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html#getting_started_install) and [bootstrap your account](https://docs.aws.amazon.com/cdk/latest/guide/bootstrapping.html) if you haven't already.
-
 
 Then run `cdk deploy --all` to deploy the project to your environment.
 
@@ -119,4 +132,3 @@ to install the dependencies. Export the Kendra Index Id from your Kendra stack t
 Then run 
 
 `crapy crawl defaultspider`
-
