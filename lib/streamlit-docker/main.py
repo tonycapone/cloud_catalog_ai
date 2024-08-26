@@ -414,7 +414,7 @@ Assistant:
     def load_product_list():
         products= json_chain(st.session_state['product_schema'])["text"]
         print(products)
-        products_table = json.loads("["+products + "]")
+        products_table = json.loads(products + "]")
         return products_table
     @st.cache_data
     def load_customers_schema():
@@ -427,7 +427,7 @@ Assistant:
     def load_customers_list():
         customers= json_chain(st.session_state['customers_schema'])["text"]
         print(customers)
-        customers_table = json.loads("["+customers + "]")
+        customers_table = json.loads(customers + "]")
         return customers_table
     @st.cache_data
     def load_junction_schema():
@@ -440,7 +440,7 @@ Assistant:
     def load_junction_table():
         junction_table= junction_item_chain(st.session_state['junction_schema'])["text"]
         print(junction_table)
-        junction_table = json.loads("[" + junction_table + "]")
+        junction_table = json.loads(junction_table + "]")
         return junction_table
 
     if "products_table" not in st.session_state:
