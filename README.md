@@ -6,7 +6,8 @@ Each part serves a distinct purpose, demonstrating practical applications of Gen
 
 This tailored approach not only personalizes the experience but also highlights the transformative potential of GenAI, instilling confidence, curiosity, and recognition of the vast opportunities that Generative AI presents.
 
-The chatbot portion demonstrates how to use [Retrieval Augmented Generation](https://arxiv.org/abs/2005.11401) to build a Generative AI chatbot that can answer questions about a customer's website. It uses [Amazon Kendra](https://aws.amazon.com/kendra/) to index the website and [Amazon Bedrock](https://aws.amazon.com/bedrock/) to generate responses to questions. It also uses [Streamlit](https://www.streamlit.io/) to provide a web interface for the chatbot.
+The chatbot portion demonstrates how to use [Retrieval Augmented Generation (RAG)](https://arxiv.org/abs/2005.11401) to build a Generative AI chatbot that can answer questions about a customer's website. It uses the [Amazon Bedrock Knowledge Base](https://aws.amazon.com/bedrock/knowledge-bases/) webcrawling datasource to index the website and generate responses to questions. It also uses [Streamlit](https://www.streamlit.io/) to provide a web interface for the chatbot.
+
 
 See the [this quip](https://quip-amazon.com/pI57Abo7dElG/Enterprise-Knowledge-Base-Chatbot-Demo) for more information. 
 
@@ -14,9 +15,10 @@ __Note: You must have access to a Bedrock enabled account to use this demo. You 
 
 ## Requirements
 - A Bedrock enabled Isengard account
-
-- A CDK boostrapped account (see instructions below)
-
+- AWS CDK installed locally
+- Docker installed locally
+- AWS CLI installed locally
+- A CDK bootstrapped account (see instructions below)
 
 ## Deployment
 __🆕 NEW! We now have a `start.py` script to help you deploy the project more easily.__

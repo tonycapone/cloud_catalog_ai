@@ -24,6 +24,7 @@ def check_docker():
 
 def run_command(command):
     try:
+        print("Running command: ", command)
         subprocess.run(command, check=True, shell=True)
     except subprocess.CalledProcessError as e:
         print(f"Error executing command: {e}")
@@ -55,7 +56,6 @@ def destroy(args):
         command += f" --profile {args.profile}"
     stack_name = args.stack if args.stack else "all"
     print(f"*** 🚀 Destroying {stack_name} stack(s) ***")
-    print("Running command: ", command)
     run_command(command)
 
 def synth(args):
