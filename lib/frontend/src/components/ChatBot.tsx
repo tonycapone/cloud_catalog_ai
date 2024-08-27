@@ -104,6 +104,14 @@ const ChatBot: React.FC = () => {
     }
   };
 
+  const renderMessageText = (text: string) => {
+    return text.split('<br>').map((paragraph, index) => (
+      <Typography key={index} variant="body1" paragraph>
+        {paragraph}
+      </Typography>
+    ));
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -118,19 +126,21 @@ const ChatBot: React.FC = () => {
                     sx={{ 
                       p: 2, 
                       maxWidth: '70%', 
-                      bgcolor: message.isUser ? 'primary.light' : 'secondary.light',
-                      color: message.isUser ? 'primary.contrastText' : 'secondary.contrastText'
+                      bgcolor: message.isUser ? '#e6f2ff' : '#fff0f5', // Softer pastel colors
+                      color: message.isUser ? '#333' : '#333', // Darker text for better readability
+                      borderRadius: '12px', // Rounded corners
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.1)', // Subtle shadow
                     }}
                   >
-                    <Typography variant="body1">{message.text}</Typography>
+                    {renderMessageText(message.text)}
                   </Paper>
                   {message.sources && (
-                    <Box sx={{ mt: 1 }}>
-                      <Typography variant="caption">Helpful links:</Typography>
+                    <Box sx={{ mt: 1, alignSelf: 'flex-start' }}>
+                      <Typography variant="caption" sx={{ color: '#666' }}>Helpful links:</Typography>
                       <List dense>
                         {message.sources.map((source, idx) => (
                           <ListItem key={idx} disablePadding>
-                            <Link href={source} target="_blank" rel="noopener noreferrer">
+                            <Link href={source} target="_blank" rel="noopener noreferrer" sx={{ color: '#1976d2' }}>
                               <Typography variant="caption">{source}</Typography>
                             </Link>
                           </ListItem>
