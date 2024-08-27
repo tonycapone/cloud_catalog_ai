@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
 import { 
   Box, 
   TextField, 
@@ -8,7 +7,6 @@ import {
   Typography, 
   List, 
   ListItem, 
-  ListItemText,
   Link,
   Container,
   ThemeProvider,
@@ -39,6 +37,7 @@ const ChatBot: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [promptModifier, setPromptModifier] = useState('Informative, empathetic, and friendly');
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,27 +46,61 @@ const ChatBot: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || isLoading) return;
 
     const userMessage: Message = { text: input, isUser: true };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
+    setIsLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:5000/chat', {
-        question: input,
-        chat_history: messages.map(m => [m.text, '']),
-        prompt_modifier: promptModifier
+      const response = await fetch('http://localhost:5000/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question: input,
+          chat_history: messages.map(m => m.text),
+          prompt_modifier: promptModifier
+        }),
       });
 
-      const botMessage: Message = {
-        text: response.data.answer,
-        isUser: false,
-        sources: response.data.sources
-      };
-      setMessages(prev => [...prev, botMessage]);
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let botMessage: Message = { text: '', isUser: false };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.type === 'metadata') {
+                botMessage.sources = data.sources;
+                // Add an empty bot message to the chat
+                setMessages(prev => [...prev, { ...botMessage }]);
+              } else if (data.type === 'content') {
+                botMessage.text += data.content;
+                setMessages(prev => [...prev.slice(0, -1), { ...botMessage }]);
+              } else if (data.type === 'stop') {
+                // Optionally handle the stop signal
+                console.log('Response complete');
+              }
+            } catch (error) {
+              console.error('Error parsing SSE data:', error);
+            }
+          }
+        }
+      }
     } catch (error) {
       console.error('Error fetching response:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -117,8 +150,9 @@ const ChatBot: React.FC = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask a question!"
+              disabled={isLoading}
             />
-            <Button type="submit" variant="contained" endIcon={<SendIcon />}>
+            <Button type="submit" variant="contained" endIcon={<SendIcon />} disabled={isLoading}>
               Send
             </Button>
           </Box>
