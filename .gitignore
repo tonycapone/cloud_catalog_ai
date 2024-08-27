@@ -14,3 +14,4 @@ cdk.context.*
 cdk.out
 cdk.context.json
 .vscode
+.env.local
