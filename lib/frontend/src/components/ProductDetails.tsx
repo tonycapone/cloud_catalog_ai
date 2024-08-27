@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Typography, CircularProgress, Box, Button, Card, CardContent, Grid } from '@mui/material';
+import { Typography, CircularProgress, Box, Button, Card, CardContent, Grid, Paper } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faInfoCircle, faListUl, faStar, faDollarSign } from '@fortawesome/free-solid-svg-icons';
 
 interface ProductInfo {
   overview: string;
@@ -32,6 +34,13 @@ const ProductDetails: React.FC = () => {
 
   const formatProductName = (name: string): string => {
     return name.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
+
+  const sectionIcons = {
+    overview: faInfoCircle,
+    features: faListUl,
+    benefits: faStar,
+    pricing: faDollarSign,
   };
 
   useEffect(() => {
@@ -102,15 +111,28 @@ const ProductDetails: React.FC = () => {
 
   return (
     <Box sx={{ maxWidth: 1200, margin: 'auto', mt: 4, px: 2 }}>
-      <Button onClick={() => navigate(-1)} sx={{ mb: 2 }}>Back to Products</Button>
-      <Typography variant="h4" gutterBottom>{formatProductName(productName || '')}</Typography>
-      <Grid container spacing={2}>
+      <Button onClick={() => navigate(-1)} sx={{ mb: 2 }}>
+        <FontAwesomeIcon icon="arrow-left" style={{ marginRight: '8px' }} />
+        Back to Products
+      </Button>
+      <Paper elevation={3} sx={{ p: 3, mb: 3, backgroundColor: '#f5f5f5' }}>
+        <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+          <FontAwesomeIcon icon="cube" style={{ marginRight: '16px' }} />
+          {formatProductName(productName || '')}
+        </Typography>
+      </Paper>
+      <Grid container spacing={3}>
         {Object.entries(productInfo).map(([section, content]) => (
           <Grid item xs={12} md={section === 'overview' ? 12 : 6} key={section}>
-            <Card sx={{ height: '100%', backgroundColor: cardColors[section as keyof typeof cardColors] }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>{section.charAt(0).toUpperCase() + section.slice(1)}</Typography>
-                <ReactMarkdown>{content || 'No information available.'}</ReactMarkdown>
+            <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <CardContent sx={{ flexGrow: 1 }}>
+                <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', color: '#1976d2' }}>
+                  <FontAwesomeIcon icon={sectionIcons[section as keyof typeof sectionIcons]} style={{ marginRight: '12px' }} />
+                  {section.charAt(0).toUpperCase() + section.slice(1)}
+                </Typography>
+                <Box sx={{ mt: 2 }}>
+                  <ReactMarkdown>{content || 'No information available.'}</ReactMarkdown>
+                </Box>
               </CardContent>
             </Card>
           </Grid>

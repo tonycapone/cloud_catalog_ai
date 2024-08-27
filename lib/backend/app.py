@@ -5,7 +5,7 @@ import boto3
 import json
 from langchain_community.retrievers import AmazonKnowledgeBasesRetriever
 from botocore.config import Config
-import time
+import re
 from dotenv import load_dotenv
 
 # Check if any of the required environment variables are missing
@@ -29,7 +29,7 @@ BEDROCK_CLIENT = boto3.client("bedrock-runtime", 'us-east-1', config=config)
 # Retriever setup
 retriever = AmazonKnowledgeBasesRetriever(
     knowledge_base_id=knowledge_base_id,
-    retrieval_config={"vectorSearchConfiguration": {"numberOfResults": 4}},
+    retrieval_config={"vectorSearchConfiguration": {"numberOfResults": 5}},
 )
 
 # Products retriever setup
@@ -37,6 +37,13 @@ products_retriever = AmazonKnowledgeBasesRetriever(
     knowledge_base_id=knowledge_base_id,
     retrieval_config={"vectorSearchConfiguration": {"numberOfResults": 10}},
 )
+
+system_prompt = """
+You are a helpful assistant that works for {customer_name}. You are an expert at answering questions about {customer_name} and their products and services. 
+You are friendly and empathetic, and you are always willing to help.
+Always answer questions from {customer_name}'s perspective.
+You should always respond in English. 
+"""
 
 # Question rewriting template
 condense_question_template = """Given the following conversation and a follow up question, rephrase the follow up question to be a standalone question, in its original language.
@@ -80,8 +87,56 @@ product_details_cache = {
   }
 }
 
-# Add this near the top of the file, after other imports
+# Cache basic company info
 response_cache = {}
+
+customer_info_cache_key = f"customer_info_response_{customer_name}"
+        
+if customer_info_cache_key in response_cache:
+    customer_info = response_cache[customer_info_cache_key]
+else:
+    customer_info_prompt = f"Who is {customer_name}? Provide a brief description of the company and its main business areas."
+    customer_info_docs = products_retriever.get_relevant_documents(f"{customer_name} company and business areas")
+    customer_info_context = "\n".join([doc.page_content for doc in customer_info_docs])
+    
+    customer_info_response = BEDROCK_CLIENT.converse(
+        modelId="anthropic.claude-3-haiku-20240307-v1:0",
+        messages=[{"role": "user", "content": [{"text": f"{customer_info_prompt}\n\nCustomer Context: {customer_info_context}"}]}],
+        inferenceConfig={"maxTokens": 500, "temperature": 0, "topP": 1},
+    )
+    customer_info = customer_info_response["output"]["message"]["content"][0]["text"]
+    
+    response_cache[customer_info_cache_key] = customer_info
+
+chat_suggested_questions_cache_key = f"chat_suggested_questions_{customer_name}"
+
+if chat_suggested_questions_cache_key in response_cache:
+    chat_suggested_questions = response_cache[chat_suggested_questions_cache_key]
+else:
+    chat_suggested_questions_prompt = f"""Based on this information about {customer_name}: {customer_info}, generate 3-5 very short questions about the company. 
+    Wrap your response in <question> tags. 
+
+    Example:
+
+    <question>What is {customer_name}'s primary business?</question>
+    <question>What are {customer_name}'s main products and services?</question>
+    """
+    chat_suggested_questions = BEDROCK_CLIENT.converse(
+        modelId="anthropic.claude-3-sonnet-20240229-v1:0",
+        messages=[{"role": "user", "content": [{"text": chat_suggested_questions_prompt}]}],
+        inferenceConfig={"maxTokens": 500, "temperature": 0, "topP": 1},
+    )
+    
+    suggested_questions_text = chat_suggested_questions["output"]["message"]["content"][0]["text"]
+    suggested_questions_list = re.findall(r'<question>(.*?)</question>', suggested_questions_text)
+    print(f"Suggested questions: {suggested_questions_list}")
+    response_cache[chat_suggested_questions_cache_key] = suggested_questions_list
+
+        
+@app.route('/chat-suggested-questions', methods=['GET'])
+def get_chat_suggested_questions():
+    return response_cache[chat_suggested_questions_cache_key]
+
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -100,6 +155,7 @@ def chat():
             try:
                 rewrite_response = BEDROCK_CLIENT.converse(
                     modelId="anthropic.claude-3-sonnet-20240229-v1:0",
+                    system=[{"text": system_prompt}],
                     messages=[{"role": "user", "content": [{"text": rewrite_prompt}]}],
                     inferenceConfig={"maxTokens": 512, "temperature": 0, "topP": 1},
                 )
@@ -148,7 +204,7 @@ def chat():
         response = BEDROCK_CLIENT.converse_stream(
             modelId="anthropic.claude-3-sonnet-20240229-v1:0",
             messages=messages,
-            system=[{"text": f"You are a helpful and talkative {customer_name} assistant. {prompt_modifier}"}],
+            system=[{"text": system_prompt}],
             inferenceConfig={
                 "temperature": 0,
                 "maxTokens": 1000,
@@ -176,66 +232,16 @@ def get_products():
             yield f"data: {json.dumps({'type': 'stop'})}\n\n"
             return
 
-        # If cache is invalid or doesn't exist, proceed with the original logic
-        # Step 1: Ask who the customer is
-        cache_key = f"customer_info_response_{customer_name}"
-        
-        if cache_key in response_cache:
-            customer_info = response_cache[cache_key]
-        else:
-            customer_info_prompt = f"Who is {customer_name}? Provide a brief description of the company and its main business areas."
-            customer_info_docs = products_retriever.get_relevant_documents(f"{customer_name} company and business areas")
-            customer_info_context = "\n".join([doc.page_content for doc in customer_info_docs])
-            
-            customer_info_response = BEDROCK_CLIENT.converse(
-                modelId="anthropic.claude-3-haiku-20240307-v1:0",
-                messages=[{"role": "user", "content": [{"text": f"{customer_info_prompt}\n\nCustomer Context: {customer_info_context}"}]}],
-                inferenceConfig={"maxTokens": 500, "temperature": 0, "topP": 1},
-            )
-            customer_info = customer_info_response["output"]["message"]["content"][0]["text"]
-            
-            response_cache[cache_key] = customer_info
-        
         print(f"Customer Info: {customer_info}")
-
-        # Step 2: Generate specific product questions
-        cache_key = f"question_generation_{customer_name}"
-        
-        if cache_key in response_cache:
-            questions_str = response_cache[cache_key]
-        else:
-            question_generation_prompt = f"""
-            Based on this information about {customer_name}:
-            {customer_info}
-            
-            Generate 3-5 specific questions about their products, services, or solutions. These questions should help identify distinct offerings. Format your response as a Python list of strings.
-            """
-            question_docs = products_retriever.get_relevant_documents(f"{customer_name} products and services")
-            question_context = "\n".join([doc.page_content for doc in question_docs])
-            
-            question_response = BEDROCK_CLIENT.converse(
-                modelId="anthropic.claude-3-sonnet-20240229-v1:0",
-                messages=[{"role": "user", "content": [{"text": f"{question_generation_prompt}\n\nAdditional Context: {question_context}"}]}],
-                inferenceConfig={"maxTokens": 500, "temperature": 0.2, "topP": 1},
-            )
-            questions_str = question_response["output"]["message"]["content"][0]["text"]
-            
-            response_cache[cache_key] = questions_str
-        
-        print(f"Generated Questions: {questions_str}")
-        
-        # Parse the questions string into a list
-        import ast
-        try:
-            questions = ast.literal_eval(questions_str)
-        except:
-            questions = [f"What are the main products and services offered by {customer_name}?"]
 
         # Step 3: Retrieve documents and extract product information
         products = []
-        processed_products = set()  # Set to keep track of processed product names
+        processed_products = set()
+          # Set to keep track of processed product names
+        product_questions = [f"What are the main products and services offered by {customer_name}?"]
 
-        for question in questions:
+        for question in product_questions:
+            print(f"Question: {question}")
             if len(products) >= limit:
                 break  # Stop processing if we've reached the limit
 
@@ -265,13 +271,13 @@ def get_products():
                 try:
                     extraction_response = BEDROCK_CLIENT.converse(
                         modelId="anthropic.claude-3-sonnet-20240229-v1:0",
+                        system=[{"text": system_prompt}],
                         messages=[{"role": "user", "content": [{"text": extraction_prompt}]}],
                         inferenceConfig={"maxTokens": 1000, "temperature": 0, "topP": 1},
                     )
                     response_content = extraction_response["output"]["message"]["content"][0]["text"]
                     
                     # Use regex to find the JSON array in the response
-                    import re
                     json_match = re.search(r'\[.*?\]', response_content, re.DOTALL)
                     if json_match:
                         json_str = json_match.group()
@@ -363,6 +369,7 @@ def get_product_details(product_name):
 
             response = BEDROCK_CLIENT.converse_stream(
                 modelId="anthropic.claude-3-sonnet-20240229-v1:0",
+                system=[{"text": system_prompt}],
                 messages=[{"role": "user", "content": [{"text": section_prompt}]}],
                 inferenceConfig={"maxTokens": 500, "temperature": 0, "topP": 1},
             )

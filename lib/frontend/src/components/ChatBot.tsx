@@ -11,7 +11,8 @@ import {
   Container,
   ThemeProvider,
   createTheme,
-  CssBaseline
+  CssBaseline,
+  Chip
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 
@@ -38,17 +39,34 @@ const ChatBot: React.FC = () => {
   const [input, setInput] = useState('');
   const [promptModifier, setPromptModifier] = useState('Informative, empathetic, and friendly');
   const [isLoading, setIsLoading] = useState(false);
+  const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
+  useEffect(() => {
+    fetchSuggestedQuestions();
+  }, []);
 
-    const userMessage: Message = { text: input, isUser: true };
+  const fetchSuggestedQuestions = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/chat-suggested-questions');
+      const data = await response.json();
+      
+      setSuggestedQuestions(data);
+    } catch (error) {
+      console.error('Error fetching suggested questions:', error);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent, questionOverride?: string) => {
+    e.preventDefault();
+    const questionToSend = questionOverride || input;
+    if (!questionToSend.trim() || isLoading) return;
+
+    const userMessage: Message = { text: questionToSend, isUser: true };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
@@ -60,7 +78,7 @@ const ChatBot: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          question: input,
+          question: questionToSend,
           chat_history: messages.map(m => m.text),
           prompt_modifier: promptModifier
         }),
@@ -82,13 +100,11 @@ const ChatBot: React.FC = () => {
               const data = JSON.parse(line.slice(6));
               if (data.type === 'metadata') {
                 botMessage.sources = data.sources;
-                // Add an empty bot message to the chat
                 setMessages(prev => [...prev, { ...botMessage }]);
               } else if (data.type === 'content') {
                 botMessage.text += data.content;
                 setMessages(prev => [...prev.slice(0, -1), { ...botMessage }]);
               } else if (data.type === 'stop') {
-                // Optionally handle the stop signal
                 console.log('Response complete');
               }
             } catch (error) {
@@ -104,6 +120,10 @@ const ChatBot: React.FC = () => {
     }
   };
 
+  const handleSuggestedQuestionClick = (question: string) => {
+    handleSubmit({ preventDefault: () => {} } as React.FormEvent, question);
+  };
+
   const renderMessageText = (text: string) => {
     return text.split('<br>').map((paragraph, index) => (
       <Typography key={index} variant="body1" paragraph>
@@ -117,8 +137,8 @@ const ChatBot: React.FC = () => {
       <CssBaseline />
       <Container maxWidth="md">
         <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', py: 2 }}>
-          <Paper elevation={3} sx={{ flexGrow: 1, mb: 2, overflow: 'auto', p: 2 }}>
-            <List>
+          <Paper elevation={3} sx={{ flexGrow: 1, mb: 2, overflow: 'auto', p: 2, display: 'flex', flexDirection: 'column' }}>
+            <List sx={{ flexGrow: 1 }}>
               {messages.map((message, index) => (
                 <ListItem key={index} sx={{ flexDirection: 'column', alignItems: message.isUser ? 'flex-end' : 'flex-start' }}>
                   <Paper 
@@ -152,6 +172,20 @@ const ChatBot: React.FC = () => {
               ))}
             </List>
             <div ref={messagesEndRef} />
+            {suggestedQuestions.length > 0 && (
+              <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {suggestedQuestions.map((question, index) => (
+                  <Chip
+                    key={index}
+                    label={question}
+                    onClick={() => handleSuggestedQuestionClick(question)}
+                    color="primary"
+                    variant="outlined"
+                    sx={{ cursor: 'pointer' }}
+                  />
+                ))}
+              </Box>
+            )}
           </Paper>
           <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', gap: 1 }}>
             <TextField
