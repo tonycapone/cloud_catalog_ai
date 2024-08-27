@@ -149,7 +149,7 @@ def chat():
 @app.route('/products', methods=['GET'])
 def get_products():
     # Add a configurable limit parameter with a default of 12
-    limit = request.args.get('limit', default=12, type=int)
+    limit = request.args.get('limit', default=1, type=int)
 
     # Check if cache is valid
     current_time = time.time()
@@ -282,6 +282,43 @@ def get_products():
     products_cache["timestamp"] = current_time
 
     return json.dumps(products[:limit])
+
+@app.route('/product-details/<product_name>', methods=['GET'])
+def get_product_details(product_name):
+    def generate():
+        # Initial query to gather basic information about the product
+        docs = products_retriever.get_relevant_documents(f"{product_name} {customer_name}")
+        context = "\n\n".join([doc.metadata['location']['webLocation']['url'] + "\n\n" + doc.page_content for doc in docs])
+
+        print(context)
+        # Generate a concise summary of the product
+        summary_prompt = f"""
+        Based on the following information about {product_name}, provide a concise summary of the product or service.
+        Focus on its key features, benefits, and its role in {customer_name}'s offerings.
+        
+        Write the summary in markdown format.
+        
+        Context: {context}
+
+        Summary:
+        """
+
+        yield f"data: {json.dumps({'type': 'initial'})}\n\n"
+
+        response = BEDROCK_CLIENT.converse_stream(
+            modelId="anthropic.claude-3-sonnet-20240229-v1:0",
+            messages=[{"role": "user", "content": [{"text": summary_prompt}]}],
+            inferenceConfig={"maxTokens": 1000, "temperature": 0, "topP": 1},
+        )
+
+        for chunk in response["stream"]:
+            if "contentBlockDelta" in chunk:
+                text = chunk["contentBlockDelta"]["delta"]["text"]
+                yield f"data: {json.dumps({'type': 'content', 'content': text})}\n\n"
+
+        yield f"data: {json.dumps({'type': 'stop'})}\n\n"
+
+    return Response(generate(), mimetype='text/event-stream')
 
 if __name__ == '__main__':
     app.run(debug=True)
