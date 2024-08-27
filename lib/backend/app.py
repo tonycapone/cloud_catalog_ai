@@ -80,6 +80,9 @@ product_details_cache = {
   }
 }
 
+# Add this near the top of the file, after other imports
+response_cache = {}
+
 @app.route('/chat', methods=['POST'])
 def chat():
     data = request.json
@@ -162,8 +165,8 @@ def chat():
 
 @app.route('/products', methods=['GET'])
 def get_products():
-    # Add a configurable limit parameter with a default of 12
-    limit = request.args.get('limit', default=3, type=int)
+    # Get the limit parameter from the request, default to 12 if not provided
+    limit = request.args.get('limit', default=12, type=int)
     def generate():
         
         if products_cache["data"]:
@@ -175,34 +178,50 @@ def get_products():
 
         # If cache is invalid or doesn't exist, proceed with the original logic
         # Step 1: Ask who the customer is
-        customer_info_prompt = f"Who is {customer_name}? Provide a brief description of the company and its main business areas."
-        customer_info_docs = products_retriever.get_relevant_documents(f"{customer_name} company and business areas")
-        customer_info_context = "\n".join([doc.page_content for doc in customer_info_docs])
+        cache_key = f"customer_info_response_{customer_name}"
         
-        customer_info_response = BEDROCK_CLIENT.converse(
-            modelId="anthropic.claude-3-haiku-20240307-v1:0",
-            messages=[{"role": "user", "content": [{"text": f"{customer_info_prompt}\n\nCustomer Context: {customer_info_context}"}]}],
-            inferenceConfig={"maxTokens": 500, "temperature": 0, "topP": 1},
-        )
-        customer_info = customer_info_response["output"]["message"]["content"][0]["text"]
+        if cache_key in response_cache:
+            customer_info = response_cache[cache_key]
+        else:
+            customer_info_prompt = f"Who is {customer_name}? Provide a brief description of the company and its main business areas."
+            customer_info_docs = products_retriever.get_relevant_documents(f"{customer_name} company and business areas")
+            customer_info_context = "\n".join([doc.page_content for doc in customer_info_docs])
+            
+            customer_info_response = BEDROCK_CLIENT.converse(
+                modelId="anthropic.claude-3-haiku-20240307-v1:0",
+                messages=[{"role": "user", "content": [{"text": f"{customer_info_prompt}\n\nCustomer Context: {customer_info_context}"}]}],
+                inferenceConfig={"maxTokens": 500, "temperature": 0, "topP": 1},
+            )
+            customer_info = customer_info_response["output"]["message"]["content"][0]["text"]
+            
+            response_cache[cache_key] = customer_info
+        
         print(f"Customer Info: {customer_info}")
 
         # Step 2: Generate specific product questions
-        question_generation_prompt = f"""
-        Based on this information about {customer_name}:
-        {customer_info}
+        cache_key = f"question_generation_{customer_name}"
         
-        Generate 3-5 specific questions about their products, services, or solutions. These questions should help identify distinct offerings. Format your response as a Python list of strings.
-        """
-        question_docs = products_retriever.get_relevant_documents(f"{customer_name} products and services")
-        question_context = "\n".join([doc.page_content for doc in question_docs])
+        if cache_key in response_cache:
+            questions_str = response_cache[cache_key]
+        else:
+            question_generation_prompt = f"""
+            Based on this information about {customer_name}:
+            {customer_info}
+            
+            Generate 3-5 specific questions about their products, services, or solutions. These questions should help identify distinct offerings. Format your response as a Python list of strings.
+            """
+            question_docs = products_retriever.get_relevant_documents(f"{customer_name} products and services")
+            question_context = "\n".join([doc.page_content for doc in question_docs])
+            
+            question_response = BEDROCK_CLIENT.converse(
+                modelId="anthropic.claude-3-sonnet-20240229-v1:0",
+                messages=[{"role": "user", "content": [{"text": f"{question_generation_prompt}\n\nAdditional Context: {question_context}"}]}],
+                inferenceConfig={"maxTokens": 500, "temperature": 0.2, "topP": 1},
+            )
+            questions_str = question_response["output"]["message"]["content"][0]["text"]
+            
+            response_cache[cache_key] = questions_str
         
-        question_response = BEDROCK_CLIENT.converse(
-            modelId="anthropic.claude-3-sonnet-20240229-v1:0",
-            messages=[{"role": "user", "content": [{"text": f"{question_generation_prompt}\n\nAdditional Context: {question_context}"}]}],
-            inferenceConfig={"maxTokens": 500, "temperature": 0.2, "topP": 1},
-        )
-        questions_str = question_response["output"]["message"]["content"][0]["text"]
         print(f"Generated Questions: {questions_str}")
         
         # Parse the questions string into a list
@@ -266,7 +285,7 @@ def get_products():
                             break  # Stop processing if we've reached the limit
 
                         if product.get("name") and product.get("name") != "Unknown Product":
-                            product_name = product["name"].lower().strip().replace(" ", "-")
+                            product_name = product["name"].lower().strip().replace(" ", "-").replace("/", " and ").replace("&", " and ")
                             if product_name not in processed_products:
                                 # Extract link from metadata
                                 metadata_link = doc.metadata.get('location', {}).get('webLocation', {}).get('url')
@@ -316,9 +335,9 @@ def get_product_details(product_name):
 
         print("Cache miss: Generating product details")
         sections = [
-            {"type": "overview", "prompt": f"Provide a brief, one paragraph overview of {product_name}."},
-            {"type": "features", "prompt": f"List the key features of {product_name}."},
-            {"type": "benefits", "prompt": f"Describe the main benefits of using {product_name}."},
+            {"type": "overview", "prompt": f"Provide a brief, one paragraph overview of {product_name} as it relates to {customer_name}."},
+            {"type": "features", "prompt": f"List the key features of the {product_name} product or service that {customer_name} offers."},
+            {"type": "benefits", "prompt": f"Describe the main benefits of using the {product_name} product or service that {customer_name} offers."},
             {"type": "pricing", "prompt": f"Explain the pricing structure or plans for {product_name}, if available."}
         ]
 

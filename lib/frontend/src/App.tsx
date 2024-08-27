@@ -12,15 +12,29 @@ const App: React.FC = () => {
       <Box sx={{ flexGrow: 1 }}>
         <AppBar position="static">
           <Toolbar>
-            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            <Typography
+              variant="h6"
+              component={RouterLink}
+              to="/"
+              sx={{
+                textDecoration: 'none',
+                color: 'inherit',
+                '&:hover': {
+                  cursor: 'pointer',
+                },
+                marginRight: 2,
+              }}
+            >
               RGA Assistant
             </Typography>
-            <Button color="inherit" component={RouterLink} to="/products">
-              Products
-            </Button>
             <Button color="inherit" component={RouterLink} to="/">
               Chat
             </Button>
+            <Button color="inherit" component={RouterLink} to="/products" sx={{ marginRight: 1 }}>
+              Products
+            </Button>
+
+            <Box sx={{ flexGrow: 1 }} />
           </Toolbar>
         </AppBar>
         <Container maxWidth="lg" sx={{ mt: 4 }}>
