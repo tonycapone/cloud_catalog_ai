@@ -5,6 +5,10 @@ import ReactMarkdown from 'react-markdown';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faInfoCircle, faListUl, faStar, faDollarSign } from '@fortawesome/free-solid-svg-icons';
 
+interface ProductDetailsProps {
+  backendUrl: string;
+}
+
 interface ProductInfo {
   overview: string;
   features: string;
@@ -19,7 +23,7 @@ const cardColors = {
   pricing: '#FFE6FF',   // Light Purple
 };
 
-const ProductDetails: React.FC = () => {
+const ProductDetails: React.FC<ProductDetailsProps> = ({ backendUrl }) => {
   const { productName } = useParams<{ productName: string }>();
   const navigate = useNavigate();
   const [productInfo, setProductInfo] = useState<ProductInfo>({
@@ -58,7 +62,7 @@ const ProductDetails: React.FC = () => {
       setError(null);
 
       try {
-        const response = await fetch(`http://localhost:5000/product-details/${encodeURIComponent(productName || '')}`);
+        const response = await fetch(`${backendUrl}/product-details/${encodeURIComponent(productName || '')}`);
         if (!response.ok) {
           throw new Error('Failed to fetch product details');
         }
@@ -103,7 +107,7 @@ const ProductDetails: React.FC = () => {
     };
 
     fetchProductDetails();
-  }, [productName]);
+  }, [productName, backendUrl]);
 
   if (error) {
     return <Typography color="error">{error}</Typography>;

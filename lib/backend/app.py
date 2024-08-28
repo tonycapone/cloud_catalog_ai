@@ -132,6 +132,9 @@ else:
     print(f"Suggested questions: {suggested_questions_list}")
     response_cache[chat_suggested_questions_cache_key] = suggested_questions_list
 
+@app.route('/', methods=['GET'])
+def index():
+    return "Hello, world!"
         
 @app.route('/chat-suggested-questions', methods=['GET'])
 def get_chat_suggested_questions():
@@ -391,4 +394,4 @@ def get_product_details(product_name):
     return Response(generate(), mimetype='text/event-stream')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)

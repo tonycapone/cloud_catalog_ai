@@ -22,6 +22,10 @@ interface Message {
   sources?: string[];
 }
 
+interface ChatBotProps {
+  backendUrl: string;
+}
+
 const theme = createTheme({
   palette: {
     mode: 'light',
@@ -34,7 +38,7 @@ const theme = createTheme({
   },
 });
 
-const ChatBot: React.FC = () => {
+const ChatBot: React.FC<ChatBotProps> = ({ backendUrl }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [promptModifier, setPromptModifier] = useState('Informative, empathetic, and friendly');
@@ -48,11 +52,11 @@ const ChatBot: React.FC = () => {
 
   useEffect(() => {
     fetchSuggestedQuestions();
-  }, []);
+  }, [backendUrl]);
 
   const fetchSuggestedQuestions = async () => {
     try {
-      const response = await fetch('http://localhost:5000/chat-suggested-questions');
+      const response = await fetch(`${backendUrl}/chat-suggested-questions`);
       const data = await response.json();
       
       setSuggestedQuestions(data);
@@ -72,7 +76,7 @@ const ChatBot: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/chat', {
+      const response = await fetch(`${backendUrl}/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

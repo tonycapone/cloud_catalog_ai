@@ -16,7 +16,11 @@ interface Product {
   icon: string;
 }
 
-const ProductGrid: React.FC = () => {
+interface ProductGridProps {
+  backendUrl: string;
+}
+
+const ProductGrid: React.FC<ProductGridProps> = ({ backendUrl }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +34,7 @@ const ProductGrid: React.FC = () => {
       fetchedRef.current = true;
       
       try {
-        const response = await fetch(`http://localhost:5000/products?limit=${productCount}`);
+        const response = await fetch(`${backendUrl}/products?limit=${productCount}`);
         if (!response.ok) {
           throw new Error('Failed to fetch products');
         }
@@ -67,21 +71,20 @@ const ProductGrid: React.FC = () => {
     };
 
     fetchProducts();
-  }, [productCount]); // Add productCount to the dependency array
+  }, [productCount, backendUrl]);
 
   const handleProductCountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const count = parseInt(event.target.value, 10);
     if (!isNaN(count) && count > 0) {
       setProductCount(count);
-      fetchedRef.current = false; // Reset the fetch flag to allow re-fetching
-      setProducts([]); // Clear existing products
-      setLoading(true); // Set loading to true to show loading indicator
+      fetchedRef.current = false;
+      setProducts([]);
+      setLoading(true);
     }
   };
 
   const handleCardClick = (internalLink: string) => {
     console.log('Navigating to:', internalLink);
-    
     navigate(decodeURIComponent(internalLink));
   };
 
