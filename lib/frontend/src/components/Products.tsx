@@ -12,6 +12,7 @@ library.add(fas);
 
 interface Product {
   name: string;
+  display_name: string;
   description: string;
   internal_link: string;
   external_link: string;
@@ -105,6 +106,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({ backendUrl }) => {
     if (!newProduct) {
       setNewProduct({
         name: '',
+        display_name: '',
         description: '',
         internal_link: '',
         external_link: '',
@@ -118,20 +120,40 @@ const ProductGrid: React.FC<ProductGridProps> = ({ backendUrl }) => {
       const updatedProduct = { ...newProduct, [field]: value };
       if (field === 'name') {
         updatedProduct.internal_link = generateInternalLink(value);
+        updatedProduct.display_name = value;
       }
       setNewProduct(updatedProduct);
     }
   };
 
-  const handleSaveNewProduct = (event: React.MouseEvent) => {
+  const handleSaveNewProduct = async (event: React.MouseEvent) => {
     event.stopPropagation();
     if (newProduct && newProduct.name && newProduct.description) {
       const productToSave = {
         ...newProduct,
-        internal_link: generateInternalLink(newProduct.name)
+        internal_link: generateInternalLink(newProduct.name),
+        display_name: newProduct.name
       };
-      setProducts(prev => [...prev, productToSave]);
-      setNewProduct(null);
+
+      try {
+        const response = await fetch(`${backendUrl}/products`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(productToSave),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save new product');
+        }
+
+        setProducts(prev => [...prev, productToSave]);
+        setNewProduct(null);
+      } catch (error) {
+        console.error('Error saving new product:', error);
+        // Handle error (e.g., show an error message to the user)
+      }
     }
   };
 
@@ -191,7 +213,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({ backendUrl }) => {
                     <Box sx={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
                       <FontAwesomeIcon icon={['fas', product.icon as any]} size="2x" style={{ marginRight: '16px' }} />
                       <Typography variant="h5" component="div">
-                        {product.name}
+                        {product.display_name}
                       </Typography>
                     </Box>
                     <Typography variant="body2" color="text.secondary">

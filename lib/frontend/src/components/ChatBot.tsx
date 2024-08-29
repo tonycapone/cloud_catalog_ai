@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Box, 
   TextField, 
@@ -15,15 +15,24 @@ import {
   Chip
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 
 interface Message {
   text: string;
   isUser: boolean;
   sources?: string[];
+  visualization?: VisualizationData;
 }
 
 interface ChatBotProps {
   backendUrl: string;
+}
+
+interface VisualizationData {
+  chart_type: string;
+  title: string;
+  description: string;
+  data: any[];
 }
 
 const theme = createTheme({
@@ -104,13 +113,22 @@ const ChatBot: React.FC<ChatBotProps> = ({ backendUrl }) => {
               const data = JSON.parse(line.slice(6));
               if (data.type === 'metadata') {
                 botMessage.sources = data.sources;
-                setMessages(prev => [...prev, { ...botMessage }]);
               } else if (data.type === 'content') {
                 botMessage.text += data.content;
-                setMessages(prev => [...prev.slice(0, -1), { ...botMessage }]);
+              } else if (data.type === 'visualization') {
+                botMessage.visualization = data.content;
               } else if (data.type === 'stop') {
                 console.log('Response complete');
               }
+              // Update messages after each chunk
+              setMessages(prev => {
+                const lastMessage = prev[prev.length - 1];
+                if (lastMessage.isUser) {
+                  return [...prev, { ...botMessage }];
+                } else {
+                  return [...prev.slice(0, -1), { ...botMessage }];
+                }
+              });
             } catch (error) {
               console.error('Error parsing SSE data:', error);
             }
@@ -136,6 +154,104 @@ const ChatBot: React.FC<ChatBotProps> = ({ backendUrl }) => {
     ));
   };
 
+  const renderVisualization = useCallback((visualization: VisualizationData) => {
+    const { chart_type, title, description, data } = visualization;
+
+    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+
+    const formatLabel = (entry: any) => {
+      const category = entry.category || entry.name || 'Unknown';
+      const value = entry.value || 0;
+      return `${category}: ${value}`;
+    };
+
+    const ChartComponent = () => {
+      switch (chart_type) {
+        case 'bar':
+          return (
+            <ResponsiveContainer width="100%" height={300} >
+              <BarChart data={data}>
+                <XAxis dataKey="category" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="value" fill="#8884d8" name="Value" />
+              </BarChart>
+            </ResponsiveContainer>
+          );
+        case 'pie':
+          return (
+            <ResponsiveContainer width="100%" height={400}>
+              <PieChart>
+                <Pie
+                  data={data}
+                  dataKey="value"
+                  nameKey="category"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={150}
+                  fill="#8884d8"
+                  label={formatLabel}
+                  labelLine={true}
+                >
+                  {data.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value, name, props) => {
+                  const total = data.reduce((sum: number, item: any) => sum + (item.value || 0), 0);
+                  const percentage = ((props.payload.value / total) * 100).toFixed(2);
+                  return [`${value} (${percentage}%)`, props.payload.category || 'Unknown'];
+                }} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          );
+        case 'line':
+          return (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={data}>
+                <XAxis dataKey="category" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="value" stroke="#8884d8" name="Value" />
+              </LineChart>
+            </ResponsiveContainer>
+          );
+        case 'radar':
+          return (
+            <ResponsiveContainer width="100%" height={300}>
+              <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
+                <PolarGrid />
+                <PolarAngleAxis dataKey="category" />
+                <PolarRadiusAxis />
+                <Radar name="Value" dataKey="value" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+              </RadarChart>
+            </ResponsiveContainer>
+          );
+        default:
+          return <p>Unsupported chart type: {chart_type}</p>;
+      }
+    };
+
+    return (
+      <Box sx={{ mt: 2, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
+        <Typography variant="h5" gutterBottom>{title || 'Visualization'}</Typography>
+        <Typography variant="body1" paragraph>{description || 'No description available.'}</Typography>
+        {data && data.length > 0 ? (
+          <ChartComponent />
+        ) : (
+          <Typography variant="body1">No data available for visualization.</Typography>
+        )}
+      </Box>
+    );
+  }, []);
+
+  const MemoizedVisualization = React.memo(({ visualization }: { visualization: VisualizationData }) => 
+    renderVisualization(visualization)
+  );
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -157,6 +273,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ backendUrl }) => {
                     }}
                   >
                     {renderMessageText(message.text)}
+                    {message.visualization && <MemoizedVisualization visualization={message.visualization} />}
                   </Paper>
                   {message.sources && (
                     <Box sx={{ mt: 1, alignSelf: 'flex-start' }}>

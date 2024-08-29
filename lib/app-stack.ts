@@ -10,6 +10,7 @@ import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as path from 'path';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 
 interface AppStackProps extends cdk.StackProps {
   customerName: string;
@@ -114,6 +115,22 @@ export class AppStack extends cdk.Stack {
       value: distribution.distributionDomainName,
       description: 'Frontend URL',
     });
-  }
 
+    // Create DynamoDB table for kb-products
+    const productTable = new dynamodb.Table(this, 'KbProductsTable', {
+      tableName: 'kb-products',
+      partitionKey: { name: 'name', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy: cdk.RemovalPolicy.DESTROY, // Use with caution in production
+    });
+
+    // Grant read/write permissions to the backend task
+    productTable.grantReadWriteData(taskRole);
+
+    // Add the table name to the backend service environment variables
+    backendService.taskDefinition.defaultContainer?.addEnvironment(
+      'PRODUCT_TABLE_NAME',
+      productTable.tableName
+    );
+  }
 }
