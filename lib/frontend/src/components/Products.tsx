@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Grid, Card, CardContent, CardActions, Button, Typography, CircularProgress, Box, TextField, Skeleton } from '@mui/material';
+import { Grid, Card, CardContent, CardActions, Button, Typography, CircularProgress, Box, TextField, Skeleton, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { fas } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router-dom';
+import AddIcon from '@mui/icons-material/Add';
+import SaveIcon from '@mui/icons-material/Save';
 
 // Add all Font Awesome solid icons to the library
 library.add(fas);
@@ -27,6 +29,11 @@ const ProductGrid: React.FC<ProductGridProps> = ({ backendUrl }) => {
   const [productCount, setProductCount] = useState<number>(12);
   const navigate = useNavigate();
   const fetchedRef = useRef(false);
+  const [newProduct, setNewProduct] = useState<Product | null>(null);
+
+  const generateInternalLink = (name: string) => {
+    return `/product/${name.toLowerCase().replace(/\s+/g, '-')}`;
+  };
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -40,6 +47,8 @@ const ProductGrid: React.FC<ProductGridProps> = ({ backendUrl }) => {
         }
         const reader = response.body!.getReader();
         const decoder = new TextDecoder();
+
+        let fetchedProducts: Product[] = [];
 
         while (true) {
           const { done, value } = await reader.read();
@@ -55,7 +64,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({ backendUrl }) => {
                 if (data.type === 'stop') {
                   setLoading(false);
                 } else {
-                  setProducts(prev => [...prev, data]);
+                  fetchedProducts.push(data);
                 }
               } catch (error) {
                 console.error('Error parsing SSE data:', error);
@@ -63,6 +72,9 @@ const ProductGrid: React.FC<ProductGridProps> = ({ backendUrl }) => {
             }
           }
         }
+
+        setProducts(fetchedProducts);
+        setLoading(false);
       } catch (err) {
         console.error('Error fetching products:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');
@@ -86,6 +98,41 @@ const ProductGrid: React.FC<ProductGridProps> = ({ backendUrl }) => {
   const handleCardClick = (internalLink: string) => {
     console.log('Navigating to:', internalLink);
     navigate(decodeURIComponent(internalLink));
+  };
+
+  const handleNewProductClick = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (!newProduct) {
+      setNewProduct({
+        name: '',
+        description: '',
+        internal_link: '',
+        external_link: '',
+        icon: 'plus-circle'
+      });
+    }
+  };
+
+  const handleNewProductChange = (field: keyof Product, value: string) => {
+    if (newProduct) {
+      const updatedProduct = { ...newProduct, [field]: value };
+      if (field === 'name') {
+        updatedProduct.internal_link = generateInternalLink(value);
+      }
+      setNewProduct(updatedProduct);
+    }
+  };
+
+  const handleSaveNewProduct = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (newProduct && newProduct.name && newProduct.description) {
+      const productToSave = {
+        ...newProduct,
+        internal_link: generateInternalLink(newProduct.name)
+      };
+      setProducts(prev => [...prev, productToSave]);
+      setNewProduct(null);
+    }
   };
 
   const PlaceholderCard = () => (
@@ -132,8 +179,10 @@ const ProductGrid: React.FC<ProductGridProps> = ({ backendUrl }) => {
                     display: 'flex',
                     flexDirection: 'column',
                     cursor: 'pointer',
+                    transition: 'all 0.3s ease-in-out',
                     '&:hover': {
                       boxShadow: 6,
+                      transform: 'scale(1.03)',
                     },
                   }}
                   onClick={() => handleCardClick(product.internal_link)}
@@ -174,6 +223,74 @@ const ProductGrid: React.FC<ProductGridProps> = ({ backendUrl }) => {
                 </Card>
               </Grid>
             ))}
+        
+        {/* New Product Card */}
+        <Grid item xs={12} sm={6} md={4}>
+          <Card 
+            sx={{ 
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              backgroundColor: '#f0f0f0',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease-in-out',
+              '&:hover': {
+                boxShadow: 6,
+                transform: 'scale(1.03)',
+              },
+            }}
+            onClick={newProduct ? undefined : handleNewProductClick}
+          >
+            <CardContent sx={{ flexGrow: 1 }}>
+              {newProduct ? (
+                <>
+                  <TextField
+                    fullWidth
+                    label="Product Name"
+                    value={newProduct.name}
+                    onChange={(e) => handleNewProductChange('name', e.target.value)}
+                    margin="normal"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Product Description"
+                    value={newProduct.description}
+                    onChange={(e) => handleNewProductChange('description', e.target.value)}
+                    margin="normal"
+                    multiline
+                    rows={3}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <Button
+                    startIcon={<SaveIcon />}
+                    variant="contained"
+                    color="primary"
+                    onClick={handleSaveNewProduct}
+                    sx={{ mt: 2 }}
+                  >
+                    Save
+                  </Button>
+                </>
+              ) : (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100%',
+                  }}
+                >
+                  <AddIcon sx={{ fontSize: 60, color: '#666' }} />
+                  <Typography variant="h6" component="div" sx={{ mt: 2 }}>
+                    Add New Product
+                  </Typography>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
       </Grid>
     </Box>
   );
