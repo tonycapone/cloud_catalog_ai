@@ -21,6 +21,21 @@ def check_docker():
         print("https://docs.docker.com/get-docker/")
         print("After installation, restart your terminal and run this script again.")
         sys.exit(1)
+        
+def check_ecr_login():
+    try:
+        # Check if we're logged in to ECR Public
+        result = subprocess.run(["docker", "image", "ls", "public.ecr.aws/z6v3b4o4/aws-cli"], capture_output=True, text=True)
+        if "REPOSITORY" in result.stdout:
+            print("Already logged in to ECR Public.")
+        else:
+            print("Logging in to ECR Public...")
+            login_command = "aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/z6v3b4o4"
+            subprocess.run(login_command, shell=True, check=True)
+            print("Successfully logged in to ECR Public.")
+    except subprocess.CalledProcessError as e:
+        print(f"Error logging in to ECR Public: {e}")
+        sys.exit(1)
 
 def run_command(command):
     try:
@@ -30,41 +45,45 @@ def run_command(command):
         print(f"Error executing command: {e}")
         sys.exit(1)
 
-def deploy(args):
-    check_context_file()
+def deploy(stack=None):
+    context = load_context()
     command = "cdk deploy"
-    if args.stack:
-        command += f" {args.stack}"
+    if stack:
+        if stack == "app":
+            stack_name = f"KB-{context['customerName']}-AppStack"
+        elif stack == "kb":
+            stack_name = f"KB-{context['customerName']}-KBStack"
+        else:
+            print("Invalid stack option. Please choose 'app' or 'kb'.")
+            return
+        command += f" {stack_name}"
     else:
         command += " --all"
-    if args.profile:
-        command += f" --profile {args.profile}"
-    stack_name = args.stack if args.stack else "all"
-    command += f" --require-approval never"
-    print(f"*** 🚀 Deploying {stack_name} stack(s) ***")
+    command += " --require-approval never"
+    print(f"*** 🚀 Deploying {'all stacks' if not stack else stack} ***")
     run_command(command)
 
-def destroy(args):
-    
-    check_context_file()
+def destroy(stack=None):
+    context = load_context()
     command = "cdk destroy"
-    if args.stack:
-        command += f" {args.stack}"
+    if stack:
+        if stack == "app":
+            stack_name = f"KB-{context['customerName']}-AppStack"
+        elif stack == "kb":
+            stack_name = f"KB-{context['customerName']}-KBStack"
+        else:
+            print("Invalid stack option. Please choose 'app' or 'kb'.")
+            return
+        command += f" {stack_name}"
     else:
         command += " --all"
-    if args.profile:
-        command += f" --profile {args.profile}"
-    stack_name = args.stack if args.stack else "all"
-    print(f"*** 🚀 Destroying {stack_name} stack(s) ***")
+    print(f"*** 🚀 Destroying {'all stacks' if not stack else stack} ***")
     run_command(command)
 
-def synth(args):
-    check_context_file()
+def synth(stack=None):
     command = "cdk synth"
-    if args.stack:
-        command += f" {args.stack}"
-    if args.profile:
-        command += f" --profile {args.profile}"
+    if stack:
+        command += f" {stack}"
     run_command(command)
 
 def check_context_file():
@@ -104,40 +123,27 @@ def create_context_file(existing_context):
         json.dump(context, f, indent=2)
     print("cdk.context.json has been created/updated successfully!")
 
+def load_context():
+    with open('cdk.context.json', 'r') as f:
+        return json.load(f)
+
 def main():
     check_cdk_cli()
     check_docker()
+    check_context_file()
 
     parser = argparse.ArgumentParser(description="CDK Deployment Script")
-    subparsers = parser.add_subparsers(dest="command", help="Available commands")
-
-    # Deploy command
-    deploy_parser = subparsers.add_parser("deploy", help="Deploy the CDK stack")
-    deploy_parser.add_argument("--all", action="store_true", help="Deploy all stacks")
-    deploy_parser.add_argument("--stack", choices=["app", "kb"], help="Deploy a specific stack (app or kb)")
-    deploy_parser.add_argument("--profile", help="AWS profile to use")
-
-    # Destroy command
-    destroy_parser = subparsers.add_parser("destroy", help="Destroy the CDK stack")
-    destroy_parser.add_argument("--all", action="store_true", help="Destroy all stacks")
-    destroy_parser.add_argument("--stack", choices=["app", "kb"], help="Destroy a specific stack (app or kb)")
-    destroy_parser.add_argument("--profile", help="AWS profile to use")
-
-    # Synth command
-    synth_parser = subparsers.add_parser("synth", help="Synthesize the CDK stack")
-    synth_parser.add_argument("--stack", choices=["app", "kb"], help="Synthesize a specific stack (app or kb)")
-    synth_parser.add_argument("--profile", help="AWS profile to use")
+    parser.add_argument("command", choices=["deploy", "destroy", "synth"], help="Command to execute")
+    parser.add_argument("stack", nargs="?", choices=["app", "kb"], help="Stack to operate on (optional)")
 
     args = parser.parse_args()
 
     if args.command == "deploy":
-        deploy(args)
+        deploy(args.stack)
     elif args.command == "destroy":
-        destroy(args)
+        destroy(args.stack)
     elif args.command == "synth":
-        synth(args)
-    else:
-        parser.print_help()
+        synth(args.stack)
 
 if __name__ == "__main__":
     main()
