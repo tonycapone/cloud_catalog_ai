@@ -26,6 +26,7 @@ interface Message {
 
 interface ChatBotProps {
   backendUrl: string;
+  customerName: string;
 }
 
 interface VisualizationData {
@@ -47,8 +48,12 @@ const theme = createTheme({
   },
 });
 
-const ChatBot: React.FC<ChatBotProps> = ({ backendUrl }) => {
-  const [messages, setMessages] = useState<Message[]>([]);
+
+const ChatBot: React.FC<ChatBotProps> = ({ backendUrl, customerName }) => {
+  const [messages, setMessages] = useState<Message[]>([{
+    text: `Hello! I am the ${customerName} AI assistant. I can help you with information about ${customerName}'s products and services and create visualizations. How can I help you today?`,
+    isUser: false,
+  }]);
   const [input, setInput] = useState('');
   const [promptModifier, setPromptModifier] = useState('Informative, empathetic, and friendly');
   const [isLoading, setIsLoading] = useState(false);
@@ -256,7 +261,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ backendUrl }) => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Container maxWidth="md">
-        <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', py: 2 }}>
+        <Box sx={{ maxheight: '100vh', display: 'flex', flexDirection: 'column', py: 2 }}>
           <Paper elevation={3} sx={{ flexGrow: 1, mb: 2, overflow: 'auto', p: 2, display: 'flex', flexDirection: 'column' }}>
             <List sx={{ flexGrow: 1 }}>
               {messages.map((message, index) => (

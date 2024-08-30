@@ -8,7 +8,10 @@ import { Link as RouterLink } from 'react-router-dom';
 
 // Custom hook to fetch config
 const useConfig = () => {
-  const [config, setConfig] = useState<{ backendUrl: string } | null>(null);
+  const [config, setConfig] = useState<{ 
+    backendUrl: string,
+    customerName: string
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -53,7 +56,7 @@ const App: React.FC = () => {
                 marginRight: 2,
               }}
             >
-              RGA Assistant
+              {config.customerName} Assistant
             </Typography>
             <Button color="inherit" component={RouterLink} to="/">
               Chat
@@ -67,7 +70,7 @@ const App: React.FC = () => {
         </AppBar>
         <Container maxWidth="lg" sx={{ mt: 4 }}>
           <Routes>
-            <Route path="/" element={<ChatBot backendUrl={config.backendUrl} />} />
+            <Route path="/" element={<ChatBot backendUrl={config.backendUrl} customerName={config.customerName} />} />
             <Route path="/products" element={<ProductGrid backendUrl={config.backendUrl} />} />
             <Route path="/product/:productName" element={<ProductDetails backendUrl={config.backendUrl} />} />
             <Route path="*" element={<Navigate to="/" replace />} />

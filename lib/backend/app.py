@@ -30,7 +30,7 @@ BEDROCK_CLIENT = boto3.client("bedrock-runtime", 'us-east-1', config=config)
 DYNAMODB_CLIENT = boto3.client('dynamodb', region_name=aws_region)
 
 # Get the DynamoDB table name from environment variable
-PRODUCT_TABLE_NAME = os.environ.get('PRODUCT_TABLE_NAME', 'kb-products')
+PRODUCT_TABLE_NAME = os.environ.get('PRODUCT_TABLE_NAME', f"{customer_name}-kb-products")
 
 # Retriever setup
 retriever = AmazonKnowledgeBasesRetriever(
@@ -124,11 +124,11 @@ else:
     print(f"Suggested questions: {suggested_questions_list}")
     response_cache[chat_suggested_questions_cache_key] = suggested_questions_list
 
-@app.route('/', methods=['GET'])
+@app.route('/api/', methods=['GET'])
 def index():
     return "Hello, world!"
         
-@app.route('/chat-suggested-questions', methods=['GET'])
+@app.route('/api/chat-suggested-questions', methods=['GET'])
 def get_chat_suggested_questions():
     return response_cache[chat_suggested_questions_cache_key]
 
@@ -248,7 +248,7 @@ def visualize_products(question):
 
     return visualization_data
 
-@app.route('/chat', methods=['POST'])
+@app.route('/api/chat', methods=['POST'])
 def chat():
     data = request.json
     
@@ -408,7 +408,7 @@ def chat():
 
     return Response(generate(), mimetype='text/event-stream')
 
-@app.route('/products', methods=['GET'])
+@app.route('/api/products', methods=['GET'])
 def get_products():
     limit = request.args.get('limit', default=12, type=int)
     def generate():
@@ -444,7 +444,7 @@ def get_products():
 
     return Response(generate(), mimetype='text/event-stream')
 
-@app.route('/products', methods=['POST'])
+@app.route('/api/products', methods=['POST'])
 def add_product():
     try:
         new_product = request.json
@@ -576,7 +576,7 @@ def generate_products(limit):
         except Exception as e:
             print(f"Error storing product in DynamoDB: {str(e)}")
 
-@app.route('/product-details/<product_name>', methods=['GET'])
+@app.route('/api/product-details/<product_name>', methods=['GET'])
 def get_product_details(product_name):
     print(f"Fetching details for product: {product_name}")
 

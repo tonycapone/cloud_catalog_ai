@@ -11,6 +11,7 @@ import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as path from 'path';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
 
 interface AppStackProps extends cdk.StackProps {
   customerName: string;
@@ -53,6 +54,10 @@ export class AppStack extends cdk.Stack {
       publicLoadBalancer: true,
     });
 
+    backendService.targetGroup.configureHealthCheck({
+      path: '/api/',
+    });
+
     const websiteBucket = new s3.Bucket(this, 'WebsiteBucket', {
       encryption: s3.BucketEncryption.S3_MANAGED,
       removalPolicy: cdk.RemovalPolicy.DESTROY, // Delete the bucket when the stack is destroyed
@@ -74,6 +79,20 @@ export class AppStack extends cdk.Stack {
         }),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       },
+      additionalBehaviors: {
+        '/api/*': {
+          origin: new origins.LoadBalancerV2Origin(backendService.loadBalancer, {
+            protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+          }),
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+          originRequestPolicy: new cloudfront.OriginRequestPolicy(this, 'ApiOriginRequestPolicy', {
+            headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList('Host'),
+            queryStringBehavior: cloudfront.OriginRequestQueryStringBehavior.all(),
+          }),
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+        },
+      },
       defaultRootObject: 'index.html',
       errorResponses: [
         {
@@ -85,7 +104,7 @@ export class AppStack extends cdk.Stack {
     });
 
     // Deploy the React app build
-    new s3deploy.BucketDeployment(this, 'DeployWebsite', {
+    const websiteDeployment = new s3deploy.BucketDeployment(this, 'DeployWebsite', {
       sources: [s3deploy.Source.asset(path.join(__dirname, './frontend'), {
         bundling: {
           command: [
@@ -96,19 +115,14 @@ export class AppStack extends cdk.Stack {
           image: cdk.DockerImage.fromRegistry('node:20'),
           user: 'root',
         },
+      }),s3deploy.Source.jsonData('config.json', {
+        backendUrl: `/api`,
+        customerName: props.customerName,
       })],
 
       destinationBucket: websiteBucket,
       distribution,
       distributionPaths: ['/*'],
-    });
-
-    // Deploy the config.json file
-    new s3deploy.BucketDeployment(this, 'DeployConfig', {
-      sources: [s3deploy.Source.jsonData('config.json', {
-        backendUrl: backendService.loadBalancer.loadBalancerDnsName
-      })],
-      destinationBucket: websiteBucket,
     });
 
     new cdk.CfnOutput(this, 'DistributionDomainName', {
@@ -118,7 +132,7 @@ export class AppStack extends cdk.Stack {
 
     // Create DynamoDB table for kb-products
     const productTable = new dynamodb.Table(this, 'KbProductsTable', {
-      tableName: 'kb-products',
+      tableName: `${props.customerName}-kb-products`,
       partitionKey: { name: 'name', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       removalPolicy: cdk.RemovalPolicy.DESTROY, // Use with caution in production

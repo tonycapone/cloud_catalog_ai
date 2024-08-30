@@ -16,3 +16,4 @@ cdk.context.json
 .vscode
 .env.local
 /lib/frontend/build
+customers/

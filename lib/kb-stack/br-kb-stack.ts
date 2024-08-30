@@ -9,13 +9,22 @@ import * as opensearchserverless from 'aws-cdk-lib/aws-opensearchserverless';
 import * as logs from 'aws-cdk-lib/aws-logs';
 
 interface KBStackProps extends cdk.StackProps {
+    customerName: string;
     scrapeUrls?: string[];
 }
 
 export class KBStack extends cdk.Stack {
     public readonly knowledgeBaseId: string;
-    constructor(scope: cdk.App, id: string, props?: KBStackProps) {
+    constructor(scope: cdk.App, id: string, props: KBStackProps) {
         super(scope, id, props);
+        let customerName = props.customerName.toLowerCase();
+        customerName = customerName.replace(/[^a-z0-9]/g, '');
+        customerName = customerName.replace(/^[0-9]+/, '');
+        if (customerName === '' || customerName.length < 3) {
+            customerName = 'customer' + Math.random().toString(36).substring(2, 7);
+        }
+        customerName = customerName.substring(0, 28); // Ensure it's not too long
+        const collectionName = `${customerName}-collection`;
 
         // Create an IAM role for the Knowledge Base
         const knowledgeBaseRole = new iam.Role(this, 'KnowledgeBaseRole', {
@@ -48,7 +57,7 @@ export class KBStack extends cdk.Stack {
 
         // Create OpenSearch Serverless Access Policy
         const ossAccessPolicy = new opensearchserverless.CfnAccessPolicy(this, 'OSSAccessPolicy', {
-            name: 'bedrock-kb-access-policy',
+            name: `${customerName}-access-policy`,
             type: 'data',
             description: 'Access policy for Bedrock Knowledge Base collection',
             policy: JSON.stringify([
@@ -57,12 +66,12 @@ export class KBStack extends cdk.Stack {
                     Rules: [
                         {
                             ResourceType: "index",
-                            Resource: ["index/bedrock-kb-collection/*"],
+                            Resource: ["index/" + collectionName + "/*"],
                             Permission: ["aoss:*"]
                         },
                         {
                             ResourceType: "collection",
-                            Resource: ["collection/bedrock-kb-collection"],
+                            Resource: ["collection/" + collectionName],
                             Permission: ["aoss:*"]
                         }
                     ],
@@ -73,11 +82,11 @@ export class KBStack extends cdk.Stack {
 
         // Create OpenSearch Serverless Network Policy
         const ossNetworkPolicy = new opensearchserverless.CfnSecurityPolicy(this, 'OSSNetworkPolicy', {
-            name: 'bedrock-kb-network-policy',
+            name: `${customerName}-network-policy`,
             type: 'network',
             policy: JSON.stringify( [{"Rules":[
-                {"ResourceType":"collection","Resource":["collection/bedrock-kb-collection"]},
-                {"ResourceType":"dashboard","Resource":["collection/bedrock-kb-collection"]}],"AllowFromPublic":true},
+                {"ResourceType":"collection","Resource":["collection/" + collectionName]},
+                {"ResourceType":"dashboard","Resource":["collection/" + collectionName]}],"AllowFromPublic":true},
             ]
             )
             }
@@ -85,17 +94,17 @@ export class KBStack extends cdk.Stack {
         
         // Create OpenSearch Serverless Security Policy
         const ossSecurityPolicy = new opensearchserverless.CfnSecurityPolicy(this, 'OSSSecurityPolicy', {
-            name: 'bedrock-kb-security-policy',
+            name: `${customerName}-security-policy`,
             type: 'encryption',
             policy: JSON.stringify({
-                "Rules": [{"ResourceType": "collection", "Resource": ["collection/bedrock-kb-collection"]}],
+                "Rules": [{"ResourceType": "collection", "Resource": ["collection/" + collectionName]}],
                 "AWSOwnedKey": true
             })
         });
 
         // Create OpenSearch Serverless Collection
         const ossCollection = new opensearchserverless.CfnCollection(this, 'MyCollection', {
-            name: 'bedrock-kb-collection',
+            name: collectionName,
             type: 'VECTORSEARCH',
         });
 
@@ -142,7 +151,7 @@ export class KBStack extends cdk.Stack {
 
         // Create the Knowledge Base
         const knowledgeBase = new bedrock.CfnKnowledgeBase(this, 'MyKnowledgeBase', {
-            name: 'kb-stack-knowledge-base',
+            name: `${customerName}-knowledge-base`,
             roleArn: knowledgeBaseRole.roleArn,
             
             knowledgeBaseConfiguration: {

@@ -62,6 +62,9 @@ def deploy(stack=None):
     command += " --require-approval never"
     print(f"*** 🚀 Deploying {'all stacks' if not stack else stack} ***")
     run_command(command)
+    print("*** ✅ Stack deployed successfully ***")
+    print("If this is the first time you've deployed this stack, you will need to wait for the Knowledge Base to finish crawling the web. This can take a while.")
+    print("You can check the status of the Knowledge Base in the AWS console at https://us-east-1.console.aws.amazon.com/bedrock/home?region=us-east-1#/knowledge-bases")
 
 def destroy(stack=None):
     context = load_context()
@@ -86,22 +89,22 @@ def synth(stack=None):
         command += f" {stack}"
     run_command(command)
 
-def check_context_file():
-    context_file = 'cdk.context.json'
+def check_context_file(customer_name):
+    context_file = os.path.join('customers', f"{customer_name}.json")
     required_keys = ['scrapeUrls', 'customerName', 'customerIndustry']
     optional_keys = ['customerLogo', 'customerFavicon']
     
     if not os.path.exists(context_file) or os.path.getsize(context_file) == 0:
-        print("*** ⛔️ cdk.context.json is missing or empty. Let's set it up! ***")
-        create_context_file({})
+        print(f"*** ⛔️ Context file for {customer_name} is missing or empty. Let's set it up! ***")
+        create_context_file({}, customer_name)
     else:
         with open(context_file, 'r') as f:
             context = json.load(f)
         if not all(key in context and context[key] for key in required_keys):
-            print("*** ⛔️ cdk.context.json is incomplete. Let's update it! ***")
-            create_context_file(context)
+            print(f"*** ⛔️ Context file for {customer_name} is incomplete. Let's update it! ***")
+            create_context_file(context, customer_name)
 
-def create_context_file(existing_context):
+def create_context_file(existing_context, customer_name):
     context = existing_context.copy()
     
     def get_input(key, prompt, required=True):
@@ -113,15 +116,55 @@ def create_context_file(existing_context):
                 return value
             print("This field is required. Please enter a value.")
 
-    context['scrapeUrls'] = get_input('scrapeUrls', "Enter comma-separated URLs to scrape").split(',')
-    context['customerName'] = get_input('customerName', "Enter customer name")
+    context['scrapeUrls'] = [url.strip().strip('"') for url in get_input('scrapeUrls', "Enter comma-separated URLs to scrape").split(',')]
+    context['customerName'] = customer_name
     context['customerIndustry'] = get_input('customerIndustry', "Enter customer industry")
-    context['customerLogo'] = get_input('customerLogo', "Enter customer logo URL (optional)", required=False)
-    context['customerFavicon'] = get_input('customerFavicon', "Enter customer favicon URL (optional)", required=False)
 
+    os.makedirs('customers', exist_ok=True)
+    with open(os.path.join('customers', f"{customer_name}.json"), 'w') as f:
+        json.dump(context, f, indent=2)
+    print(f"Context file for {customer_name} has been created/updated successfully!")
+
+def load_customer_context(customer_name):
+    customer_file = os.path.join('customers', f"{customer_name}.json")
+    if not os.path.exists(customer_file):
+        print(f"Customer {customer_name} does not exist.")
+        sys.exit(1)
+    
+    with open(customer_file, 'r') as f:
+        context = json.load(f)
+    
     with open('cdk.context.json', 'w') as f:
         json.dump(context, f, indent=2)
-    print("cdk.context.json has been created/updated successfully!")
+    
+    print(f"Loaded context for customer: {customer_name}")
+
+def list_customers():
+    customers_dir = 'customers'
+    if not os.path.exists(customers_dir):
+        print("No customers found.")
+        return
+    customers = [f.split('.')[0] for f in os.listdir(customers_dir) if f.endswith('.json')]
+    if not customers:
+        print("No customers found.")
+    else:
+        print("Available customers:")
+        for customer in customers:
+            print(f"- {customer}")
+
+def create_customer():
+    customer_name = input("Enter new customer name: ").strip()
+    if not customer_name:
+        print("Customer name cannot be empty.")
+        return
+    
+    customer_file = os.path.join('customers', f"{customer_name}.json")
+    if os.path.exists(customer_file):
+        print(f"Customer {customer_name} already exists.")
+        return
+    
+    create_context_file({}, customer_name)
+    print(f"Customer {customer_name} created successfully.")
 
 def load_context():
     with open('cdk.context.json', 'r') as f:
@@ -130,13 +173,27 @@ def load_context():
 def main():
     check_cdk_cli()
     check_docker()
-    check_context_file()
 
     parser = argparse.ArgumentParser(description="CDK Deployment Script")
-    parser.add_argument("command", choices=["deploy", "destroy", "synth"], help="Command to execute")
+    parser.add_argument("command", choices=["deploy", "destroy", "synth", "list", "create"], help="Command to execute")
     parser.add_argument("stack", nargs="?", choices=["app", "kb"], help="Stack to operate on (optional)")
+    parser.add_argument("--customer", help="Customer name")
 
     args = parser.parse_args()
+
+    if args.command == "list":
+        list_customers()
+        return
+    elif args.command == "create":
+        create_customer()
+        return
+
+    if not args.customer:
+        print("Please specify a customer using --customer")
+        sys.exit(1)
+
+    check_context_file(args.customer)
+    load_customer_context(args.customer)
 
     if args.command == "deploy":
         deploy(args.stack)

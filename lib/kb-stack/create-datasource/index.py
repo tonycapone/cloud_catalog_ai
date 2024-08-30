@@ -30,7 +30,7 @@ def create_data_source(event, context):
                         'crawlerLimits': {
                             'rateLimit': 300  # Max rate, adjust as needed
                         },
-                        'scope': 'HOST_ONLY'  # Adjust scope as needed
+                        'scope': 'SUBDOMAINS'  # Adjust scope as needed
                     },
                     'sourceConfiguration': {
                         'urlConfiguration': {
@@ -41,11 +41,7 @@ def create_data_source(event, context):
             },
             vectorIngestionConfiguration={
                 'chunkingConfiguration': {
-                    'chunkingStrategy': 'FIXED_SIZE',
-                    'fixedSizeChunkingConfiguration': {
-                        'maxTokens': 1000,  # Adjust as needed
-                        'overlapPercentage': 20  # Adjust as needed
-                    }
+                    'chunkingStrategy': 'NONE',
                 }
             }
         )
