@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-import { KbStreamlitAppStack } from '../lib/kb-streamlit-app'
 import { KBStack } from '../lib/kb-stack/br-kb-stack'; 
-
+import { AppStack } from '../lib/app-stack';
 const app = new cdk.App();
 
 /**
@@ -57,7 +56,6 @@ const extractConfig = () => {
 
 const config = extractConfig();
 
-// remove any special characters from the stack name
 let stackPrefix = config.customerName
 stackPrefix = "KB-" + stackPrefix.replace(/[^\w]/g, '');
 
@@ -65,12 +63,7 @@ const kbStack = new KBStack(app, `${stackPrefix}-KBStack`, {
   scrapeUrls: (config.scrapeUrls + "").split(","),
 });
 
-new KbStreamlitAppStack (app, `${stackPrefix}-AppStack`, {
-  knowledgeBaseId: kbStack.knowledgeBaseId,
-  openAIAPIKey: config.openAIAPIKey,
+const appStack = new AppStack(app, `${stackPrefix}-AppStack`, {
   customerName: config.customerName,
-  customerFavicon: config.customerFavicon,
-  customerLogo: config.customerLogo,
-  customerIndustry: config.customerIndustry
-})
-
+  knowledgeBaseId: kbStack.knowledgeBaseId,
+});

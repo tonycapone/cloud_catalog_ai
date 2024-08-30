@@ -142,7 +142,7 @@ export class KBStack extends cdk.Stack {
 
         // Create the Knowledge Base
         const knowledgeBase = new bedrock.CfnKnowledgeBase(this, 'MyKnowledgeBase', {
-            name: 'MyKnowledgeBase',
+            name: 'kb-stack-knowledge-base',
             roleArn: knowledgeBaseRole.roleArn,
             
             knowledgeBaseConfiguration: {
