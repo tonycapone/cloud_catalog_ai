@@ -12,10 +12,14 @@ import {
   ThemeProvider,
   createTheme,
   CssBaseline,
-  Chip
+  Chip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 interface Message {
   text: string;
@@ -56,6 +60,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ backendUrl, customerName }) => {
   }]);
   const [input, setInput] = useState('');
   const [promptModifier, setPromptModifier] = useState('Informative, empathetic, and friendly');
+  const [showPromptModifier, setShowPromptModifier] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
@@ -316,7 +321,6 @@ const ChatBot: React.FC<ChatBotProps> = ({ backendUrl, customerName }) => {
           <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', gap: 1 }}>
             <TextField
               fullWidth
-              variant="outlined"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask a question!"
@@ -326,17 +330,28 @@ const ChatBot: React.FC<ChatBotProps> = ({ backendUrl, customerName }) => {
               Send
             </Button>
           </Box>
-          <TextField
-            fullWidth
-            multiline
-            rows={2}
-            margin="normal"
-            label="Prompt Modifier"
-            variant="outlined"
-            value={promptModifier}
-            onChange={(e) => setPromptModifier(e.target.value)}
-          />
         </Box>
+        <Accordion sx={{ mt: 2 }}>
+            <AccordionSummary
+              expandIcon={<ExpandMoreIcon />}
+              aria-controls="prompt-modifier-content"
+              id="prompt-modifier-header"
+            >
+              <Typography>Settings</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <TextField
+                fullWidth
+                multiline
+                rows={2}
+                margin="normal"
+                label="Prompt Modifier"
+                variant="outlined"
+                value={promptModifier}
+                onChange={(e) => setPromptModifier(e.target.value)}
+              />
+            </AccordionDetails>
+          </Accordion>
       </Container>
     </ThemeProvider>
   );

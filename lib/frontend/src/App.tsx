@@ -33,7 +33,7 @@ const useConfig = () => {
 
 const App: React.FC = () => {
   const { config, loading, error } = useConfig();
-
+  document.title = `${config?.customerName} AI Assistant`;
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error loading config: {error.message}</div>;
   if (!config) return <div>Config not available</div>;

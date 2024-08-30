@@ -1,13 +1,19 @@
 # Generative AI Tailored Demos
 ## About
-The GenAI Tailored Demo Experience is a tool designed to introduce customers to Generative AI, targeting customers in the "just curious" or FOMO stage of their journey. The demo can be customized to each customer and their industry, and consists of three main components: a Conversational AI Chat Demo, a Product Ideator, and a Data Querying Tool. 
+The GenAI Tailored Demo Experience is a tool designed to introduce customers to Generative AI, targeting customers in the "just curious" or FOMO stage of their journey. The demo can be customized to each customer and their industry, and consists of two main components: a Conversational AI Chat Demo and an Automated Product Catalog Generator.
 
 Each part serves a distinct purpose, demonstrating practical applications of GenAI by utilizing real data from the customer's public-facing website. Deployed as an easily manageable CDK project, the demo experience emphasizes the real-world potential of GenAI in a way that resonates with the specific needs and context of the customer.
 
 This tailored approach not only personalizes the experience but also highlights the transformative potential of GenAI, instilling confidence, curiosity, and recognition of the vast opportunities that Generative AI presents.
 
-The chatbot portion demonstrates how to use [Retrieval Augmented Generation (RAG)](https://arxiv.org/abs/2005.11401) to build a Generative AI chatbot that can answer questions about a customer's website. It uses the [Amazon Bedrock Knowledge Base](https://aws.amazon.com/bedrock/knowledge-bases/) webcrawling datasource to index the website and generate responses to questions. It also uses [Streamlit](https://www.streamlit.io/) to provide a web interface for the chatbot.
+The chatbot portion demonstrates how to use [Retrieval Augmented Generation (RAG)](https://arxiv.org/abs/2005.11401) to build a Generative AI chatbot that can answer questions about a customer's website. It uses the [Amazon Bedrock Knowledge Base](https://aws.amazon.com/bedrock/knowledge-bases/) webcrawling datasource to index the website and generate responses to questions. It also uses a Reactjs app to provide a web interface for the chatbot.
 
+The Automated Product Catalog Generator is a new feature that:
+- Crawls website pages and extracts product information
+- Uses LLM to categorize products and generate descriptions
+- Stores data in Amazon DynamoDB for easy retrieval
+
+This addition enhances the demo by showcasing how GenAI can automate and streamline product management processes.
 
 See the [this quip](https://quip-amazon.com/pI57Abo7dElG/Enterprise-Knowledge-Base-Chatbot-Demo) for more information. 
 
