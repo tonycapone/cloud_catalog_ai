@@ -19,6 +19,7 @@ See the [this quip](https://quip-amazon.com/pI57Abo7dElG/Enterprise-Knowledge-Ba
 
 __Note: You must have access to a Bedrock enabled account to use this demo. You can also use the OpenAI API instead of Bedrock, but it's not advisable to demo in this way to customers.__
 
+
 ## Requirements
 - A Bedrock enabled Isengard account
 - AWS CDK installed locally
