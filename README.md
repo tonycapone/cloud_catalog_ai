@@ -1,35 +1,24 @@
-# Generative AI Tailored Demos
+# Amazon Bedrock Insights Explorer: GenAI Demo Suite
 ## About
-The GenAI Tailored Demo Experience is a tool designed to introduce customers to Generative AI, targeting customers in the "just curious" or FOMO stage of their journey. The demo can be customized to each customer and their industry, and consists of two main components: a Conversational AI Chat Demo and an Automated Product Catalog Generator.
+The Amazon Bedrock Insights Explorer is designed to showcase the capabilities of Amazon Bedrock, Bedrock Knowledge Bases, and advanced language models like Claude 3. This demo consists of two main components: a Conversational AI Chat Demo and an Automated Product Catalog Generator.
 
-Each part serves a distinct purpose, demonstrating practical applications of GenAI by utilizing real data from the customer's public-facing website. Deployed as an easily manageable CDK project, the demo experience emphasizes the real-world potential of GenAI in a way that resonates with the specific needs and context of the customer.
+Each part demonstrates practical applications of Generative AI by utilizing real data from a public-facing website. Deployed as an easily manageable CDK project, the demo experience emphasizes the real-world potential of GenAI in various industries and use cases.
 
-This tailored approach not only personalizes the experience but also highlights the transformative potential of GenAI, instilling confidence, curiosity, and recognition of the vast opportunities that Generative AI presents.
+The chatbot portion demonstrates how to use [Retrieval Augmented Generation (RAG)](https://arxiv.org/abs/2005.11401) to build a Generative AI chatbot that can answer questions about a specific website. It leverages the [Amazon Bedrock Knowledge Base](https://aws.amazon.com/bedrock/knowledge-bases/) webcrawling datasource to index the website and generate responses to questions. A React.js app provides a web interface for the chatbot.
 
-The chatbot portion demonstrates how to use [Retrieval Augmented Generation (RAG)](https://arxiv.org/abs/2005.11401) to build a Generative AI chatbot that can answer questions about a customer's website. It uses the [Amazon Bedrock Knowledge Base](https://aws.amazon.com/bedrock/knowledge-bases/) webcrawling datasource to index the website and generate responses to questions. It also uses a Reactjs app to provide a web interface for the chatbot.
-
-The Automated Product Catalog Generator is a new feature that:
+The Automated Product Catalog Generator is a feature that:
 - Crawls website pages and extracts product information
-- Uses LLM to categorize products and generate descriptions
+- Uses Claude 3to categorize products and generate descriptions
 - Stores data in Amazon DynamoDB for easy retrieval
 
-This addition enhances the demo by showcasing how GenAI can automate and streamline product management processes.
-
-See the [this quip](https://quip-amazon.com/pI57Abo7dElG/Enterprise-Knowledge-Base-Chatbot-Demo) for more information. 
-
-__Note: You must have access to a Bedrock enabled account to use this demo. You can also use the OpenAI API instead of Bedrock, but it's not advisable to demo in this way to customers.__
-
-
 ## Requirements
-- A Bedrock enabled Isengard account
+- AWS Account
 - AWS CDK installed locally
 - Docker installed locally
 - AWS CLI installed locally
 - A CDK bootstrapped account (see instructions below)
 
 ## Deployment
-__🆕 NEW! We now have a `start.py` script to help you deploy the project more easily.__
-
 ### Using start.py
 
 1. Make sure you have Python 3 installed on your system.
@@ -93,8 +82,6 @@ Then run `cdk deploy --all` to deploy the project to your environment.
         "https://www.example.com/"
     ],
     "customerName": "ACME Corp",
-    "customerFavicon": "optional favicon link",
-    "customerLogo": "http://acmecorp.com/logo.jpg",
     "customerIndustry": "Trucking"
 
 }
@@ -110,34 +97,49 @@ The `scrapeUrls` array contains the URLs that will be scraped and indexed into K
 `customerIndustry` The industry that the customer is in. Used for synthetic data generation
 
 ## Stack Description
-### KendraStack
-This stack creates a Kendra index. It also creates a Kendra datasource for the index and initiates a sync job to populate the datasource with the scraped URLs.
 
-### KbStreamlitAppStack
-This stack creates a Streamlit ChatBot app that interacts with the Kendra Index. 
+### KBStack (br-kb-stack.ts)
+This stack creates the core components for the Bedrock Knowledge Base:
+
+- OpenSearch Serverless Collection: Used for vector search capabilities.
+- Bedrock Knowledge Base: Configured with the OpenSearch Serverless backend.
+- Data Source: Created and linked to the Knowledge Base, using provided URLs for web crawling.
+- Ingestion Job: Initiated to populate the Knowledge Base with data from the specified URLs.
+
+### AppStack (app-stack.ts)
+This stack deploys the application infrastructure:
+
+- Backend Service: An ECS Fargate service running a containerized backend application.
+- Frontend: A React application deployed to an S3 bucket.
+- CloudFront Distribution: Serves the frontend and routes API requests to the backend.
+- DynamoDB Table: Stores product information for the knowledge base.
 
 ## Local Development
-To deploy the Streamlit app locally, cd to `/lib/streamlit-docker`. You must define the following environment variables:
-```
-KENDRA_INDEX_ID
-CUSTOMER_NAME
-LOGO_URL
-FAVICON_URL
-AWS_REGION
-```
-Then run `streamlit run main.py` to start the app.
 
-## Scraping
-The project uses the V1 verson of the Kendra web-scraper to crawl the customer's URLs. This works in most cases, but there are some situations where the scraper is blocked from some reason. In this case, you can use the provided scraper to crawl the customer's website and upload the results to Kendra.
+### Backend
+To run the backend service locally:
 
-The scraper uses a Python library called [Scrapy](https://scrapy.org/).
+1. Navigate to the `lib/backend` directory.
+2. Ensure Python 3.x is installed.
+3. Set up the following environment variables (using a .env file or export in your terminal):
+   ```
+   AWS_REGION
+   CUSTOMER_NAME
+   KNOWLEDGE_BASE_ID
+   PRODUCT_TABLE_NAME
+   ```
+4. Install dependencies: `pip install -r requirements.txt` (assuming there's a requirements.txt file)
+5. Start the service by running:
+   ```
+   python app.py
+   ```
 
-To use the scraper, cd to `/scraper` and run 
+### Frontend
+To run the frontend locally:
 
-`pip install -r requirements.txt` 
+1. Navigate to the `lib/frontend` directory.
+2. Ensure Node.js (version 14.x or later) is installed.
+3. Install dependencies: `npm install`
+4. Start the development server: `npm start`
 
-to install the dependencies. Export the Kendra Index Id from your Kendra stack to the `KENDRA_INDEX_ID` environment variable. 
-
-Then run 
-
-`crapy crawl defaultspider`
+Note: When running locally, you may need to configure the frontend to point to your local or deployed backend service. Check the frontend configuration files for API endpoint settings.
